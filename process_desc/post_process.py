@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 tqdm.pandas()
 
-REACTION_DESCRIPTORS = ["G", "DE_RP", "G*", "G**"]
+REACTION_DESCRIPTORS = ["G", "DE_RP", "G_alt1", "G_alt2"]
 #GLOBAL_SCALE = ['partial_charge', 'fukui_neu', 'fukui_elec']
 GLOBAL_SCALE = ['partial_charge', 'fukui_neu', 'fukui_elec','parr_elec','parr_neu','spin_dens','spin_dens_triplet']
 ATOM_SCALE = ['NMR']

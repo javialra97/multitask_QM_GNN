@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
 import numpy as np
 import pandas as pd
+import math
 
 from tqdm import tqdm
 from utils import lr_multiply_ratio, parse_args, create_logger, scale_targets
@@ -49,6 +50,7 @@ for i in range(args.k_fold):
     if args.sample:
         try:
             train = train.sample(n=args.sample, random_state=1)
+            valid = valid.sample(n=math.ceil(int(args.sample)/2))
         except Exception:
             pass
 
@@ -91,9 +93,6 @@ for i in range(args.k_fold):
     model.compile(
         optimizer=opt,
         loss='mean_squared_error',
-        metrics=[tf.keras.metrics.RootMeanSquaredError(
-            name='root_mean_squared_error', dtype=None), tf.keras.metrics.MeanAbsoluteError(
-            name='mean_absolute_error', dtype=None), ]
     )
 
     save_name = os.path.join(args.model_dir, 'best_model_{}.hdf5'.format(i))

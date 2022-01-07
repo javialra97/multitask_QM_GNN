@@ -48,7 +48,7 @@ def parse_args(cross_val=False):
                         default=["partial_charge", "fukui_elec", "fukui_neu", "nmr"],
                         help='(Optional) Selection of atom-condensed descriptors to feed to the ml_QM_GNN model')
     parser.add_argument('--select_reaction_descriptors', nargs='+',
-                        default=["G", "DE_RP", "G*", "G**"],
+                        default=["G", "DE_RP", "G_alt1", "G_alt2"],
                         help='(Optional) Selection of reaction descriptors to feed to the ml_QM_GNN model')
 
     if cross_val:
