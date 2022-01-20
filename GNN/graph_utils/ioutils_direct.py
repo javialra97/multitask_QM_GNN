@@ -83,7 +83,6 @@ def get_bond_label(r, edits, max_natoms):
 
 
 def binary_features_batch(r_list):
-    mol_list = []
     max_natoms = 0
     for r in r_list:
         rmol = Chem.MolFromSmiles(r)
@@ -93,27 +92,3 @@ def binary_features_batch(r_list):
     for r in r_list:
         features.append(get_bin_feature(r, max_natoms))
     return np.array(features)
-
-
-def get_feature_batch(r_list):
-    max_natoms = 0
-    for r in r_list:
-        rmol = Chem.MolFromSmiles(r)
-        if rmol.GetNumAtoms() > max_natoms:
-            max_natoms = rmol.GetNumAtoms()
-
-    features = []
-    for r in r_list:
-        features.append(get_bin_feature(r,max_natoms))
-    return np.array(features)
-
-
-def smiles2graph_list_bin(smiles_list, idxfunc=lambda x:x.GetIdx()):
-    res = list(map(lambda x:smiles2graph(x,idxfunc), smiles_list))
-    fatom_list, fbond_list, gatom_list, gbond_list, nb_list = zip(*res)
-    #print(fatom_list)
-    return pack2D(fatom_list), pack2D(fbond_list), pack2D_withidx(gatom_list), pack2D_withidx(gbond_list), pack1D(nb_list), get_mask(fatom_list), binary_features_batch(smiles_list)
-
-# if __name__ == '__main__':
-#     smiles = ['CC']#, 'CCOCO']
-#     print(binary_features_batch(smiles))

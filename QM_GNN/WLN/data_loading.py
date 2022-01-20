@@ -1,5 +1,4 @@
 # import tensorflow as tf
-import os
 import numpy as np
 import pandas as pd
 from tensorflow.keras.utils import Sequence
@@ -9,17 +8,18 @@ from ..graph_utils.ioutils_direct import binary_features_batch
 
 
 class Graph_DataLoader(Sequence):
-    def __init__(self, smiles, product, rxn_id, target, batch_size, selected_atom_descriptors, selected_reaction_descriptors, shuffle=True, predict=False):
+    def __init__(self, smiles, product, rxn_id, target, batch_size, selected_atom_descriptors, selected_bond_descriptors, 
+                selected_reaction_descriptors, shuffle=True, predict=False):
         self.smiles = smiles
         self.product = product
         self.rxn_id = rxn_id
         self.target = target
         self.batch_size = batch_size
         self.shuffle = shuffle
-        self.atom_classes = {}
         self.predict = predict
         self.selected_atom_descriptors = selected_atom_descriptors
         self.selected_reaction_descriptors = selected_reaction_descriptors
+        self.selected_bond_descriptors = selected_bond_descriptors
 
         if self.predict:
             self.shuffle = False
@@ -55,7 +55,8 @@ class Graph_DataLoader(Sequence):
 
         for r, p, rxn_id, target in zip(smiles_tmp, product_tmp, rxn_id_tmp, target_tmp):
             rxn_id_extend.extend([rxn_id])
-            prs_extend.extend([smiles2graph_pr(r, p, self.selected_atom_descriptors, self.selected_reaction_descriptors)])
+            prs_extend.extend([smiles2graph_pr(r, p, self.selected_atom_descriptors, self.selected_bond_descriptors, 
+                            self.selected_reaction_descriptors)])
             target_extend.extend([target])
 
         rs_extends, smiles_extend = zip(*prs_extend)

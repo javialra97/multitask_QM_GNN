@@ -46,10 +46,12 @@ def parse_args(cross_val=False):
                         help='Split of the dataset into testing, validating, and training. The sum should be 100')
     parser.add_argument('--select_atom_descriptors', nargs='+',
                         default=["partial_charge", "fukui_elec", "fukui_neu", "nmr"],
-                        help='(Optional) Selection of atom-condensed descriptors to feed to the ml_QM_GNN model')
+                        help='(Optional) Selection of atom-condensed descriptors to feed to the (ml_QM_)GNN model')
     parser.add_argument('--select_reaction_descriptors', nargs='+',
                         default=["G", "DE_RP", "G_alt1", "G_alt2"],
-                        help='(Optional) Selection of reaction descriptors to feed to the ml_QM_GNN model')
+                        help='(Optional) Selection of reaction descriptors to feed to the (ml_)QM_GNN model')
+    parser.add_argument('--select_bond_descriptors', nargs='+', default=['bond_order', 'bond_length'],
+                        help='(Optional) Selection of bond descriptors to feed to the (ml_)QM_GNN model')
 
     if cross_val:
         parser.add_argument('--k_fold', default=10, type=int,

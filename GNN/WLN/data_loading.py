@@ -6,7 +6,7 @@ from ..graph_utils.ioutils_direct import binary_features_batch
 
 
 class Graph_DataLoader(Sequence):
-    def __init__(self, smiles, product, rxn_id, target, batch_size, selected_atom_descriptors, selected_reaction_descriptors, shuffle=True, predict=False):
+    def __init__(self, smiles, product, rxn_id, target, batch_size, selected_atom_descriptors, selected_bond_descriptors, selected_reaction_descriptors, shuffle=True, predict=False):
         self.smiles = smiles
         self.product = product
         self.rxn_id = rxn_id
@@ -14,9 +14,9 @@ class Graph_DataLoader(Sequence):
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.on_epoch_end()
-        self.atom_classes = {}
         self.predict = predict
         self.selected_atom_descriptors = selected_atom_descriptors
+        self.selected_bond_descriptors = selected_bond_descriptors
         self.selected_reaction_descriptors = selected_reaction_descriptors
 
     def __len__(self):

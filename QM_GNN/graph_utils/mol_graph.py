@@ -1,18 +1,16 @@
-from numpy.lib.function_base import select
-import rdkit
 import rdkit.Chem as Chem
 import numpy as np
 import pandas as pd
 import os
 
-# import tensorflow as tf
 
 elem_list = ['C', 'O', 'N', 'F', 'Br', 'Cl', 'S',
              'Si', 'B', 'I', 'K', 'Na', 'P', 'Mg', 'Li', 'Al', 'H']
 
 atom_fdim_geo = len(elem_list) + 6 + 6 + 6 + 1
 
-bond_fdim_geo = 6
+#bond_fdim_geo = 6
+bond_fdim = 20 + 20
 max_nb = 10
 
 qm_descriptors = None
@@ -73,7 +71,7 @@ def bond_features(bond):
          bt == Chem.rdchem.BondType.AROMATIC, bond.GetIsConjugated(), bond.IsInRing()], dtype=np.float32)
 
 
-def _mol2graph(rs, selected_atom_descriptors, selected_reaction_descriptors, ps, core=[]):
+def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selected_reaction_descriptors, ps, core=[]):
     atom_fdim_qm = 20 * len(selected_atom_descriptors)
     reaction_fdim_qm = len(selected_reaction_descriptors)
 
@@ -90,7 +88,8 @@ def _mol2graph(rs, selected_atom_descriptors, selected_reaction_descriptors, ps,
     n_bonds = max(mol_rs.GetNumBonds(), 1)
     fatoms_geo = np.zeros((n_atoms, atom_fdim_geo))
     fatoms_qm = np.zeros((n_atoms, atom_fdim_qm))
-    fbonds_geo = np.zeros((n_bonds, bond_fdim_geo))
+    #fbonds_geo = np.zeros((n_bonds, bond_fdim_geo))
+    fbonds = np.zeros((n_bonds, bond_fdim))
     freaction_qm = np.zeros((reaction_fdim_qm,))
 
     atom_nb = np.zeros((n_atoms, max_nb), dtype=np.int32)
@@ -103,32 +102,41 @@ def _mol2graph(rs, selected_atom_descriptors, selected_reaction_descriptors, ps,
         mol = Chem.MolFromSmiles(smiles)
         fatom_index_mol = {a.GetIntProp('molAtomMapNumber') - 1: a.GetIdx() for a in mol.GetAtoms()}
 
-        qm_series = qm_descriptors.loc[smiles]
+        if "none" not in selected_bond_descriptors:
+            qm_series = qm_descriptors.loc(smiles)
 
-        partial_charge = qm_series['partial_charge'].reshape(-1, 1)
-        partial_charge = np.apply_along_axis(rbf_expansion, -1, partial_charge, 0.0, 0.05, 20)
+            bond_index = np.expand_dims(qm_series['bond_order_matrix'], -1)
+            bond_index = np.apply_along_axis(rbf_expansion, -1, bond_index, 0.5, 0.125, 20)
 
-        fukui_elec = qm_series['fukui_elec'].reshape(-1, 1)
-        fukui_elec = np.apply_along_axis(rbf_expansion, -1, fukui_elec, 0, 0.05, 20)
-
-        fukui_neu = qm_series['fukui_neu'].reshape(-1, 1)
-        fukui_neu = np.apply_along_axis(rbf_expansion, -1, fukui_neu, 0, 0.05, 20)
-
-        spin_dens = qm_series['spin_dens'].reshape(-1, 1)
-        spin_dens = np.apply_along_axis(rbf_expansion, -1, spin_dens, 0, 0.05, 20)
-
-        spin_dens_triplet = qm_series['spin_dens_triplet'].reshape(-1, 1)
-        spin_dens_triplet = np.apply_along_axis(rbf_expansion, -1, spin_dens_triplet, 0, 0.05, 20)
-
-        nmr = qm_series['NMR'].reshape(-1, 1)
-        nmr = np.apply_along_axis(rbf_expansion, -1, nmr, 0.0, 0.05, 20)
-
-        selected_atom_descriptors = list(set(selected_atom_descriptors))
-        selected_atom_descriptors.sort()
-
-        atom_qm_descriptor = None
+            bond_distance = np.expand_dims(qm_series['distance_matrix'], -1)
+            bond_distance = np.apply_along_axis(rbf_expansion, -1, bond_distance, 0.5, 0.10, 20)
 
         if "none" not in selected_atom_descriptors:
+            qm_series = qm_descriptors.loc[smiles]
+
+            partial_charge = qm_series['partial_charge'].reshape(-1, 1)
+            partial_charge = np.apply_along_axis(rbf_expansion, -1, partial_charge, 0.0, 0.05, 20)
+
+            fukui_elec = qm_series['fukui_elec'].reshape(-1, 1)
+            fukui_elec = np.apply_along_axis(rbf_expansion, -1, fukui_elec, 0, 0.05, 20)
+
+            fukui_neu = qm_series['fukui_neu'].reshape(-1, 1)
+            fukui_neu = np.apply_along_axis(rbf_expansion, -1, fukui_neu, 0, 0.05, 20)
+
+            spin_dens = qm_series['spin_dens'].reshape(-1, 1)
+            spin_dens = np.apply_along_axis(rbf_expansion, -1, spin_dens, 0, 0.05, 20)
+
+            spin_dens_triplet = qm_series['spin_dens_triplet'].reshape(-1, 1)
+            spin_dens_triplet = np.apply_along_axis(rbf_expansion, -1, spin_dens_triplet, 0, 0.05, 20)
+
+            nmr = qm_series['NMR'].reshape(-1, 1)
+            nmr = np.apply_along_axis(rbf_expansion, -1, nmr, 0.0, 0.05, 20)
+
+            selected_atom_descriptors = list(set(selected_atom_descriptors))
+            selected_atom_descriptors.sort()
+
+            atom_qm_descriptor = None
+
             for descriptor in selected_atom_descriptors:
                 if atom_qm_descriptor is not None:
                     atom_qm_descriptor = np.concatenate([atom_qm_descriptor, locals()[descriptor]], axis=-1)
@@ -161,25 +169,30 @@ def _mol2graph(rs, selected_atom_descriptors, selected_reaction_descriptors, ps,
             num_nbs[a1] += 1
             num_nbs[a2] += 1
 
-            fbonds_geo[idx, :] = bond_features(bond)
-
-    rxns = rs + ">>" + ps
-    reaction_descriptor_series = reaction_descriptors.loc[rxns]
+            fbonds[idx, :6] = bond_features(bond)
+            if "bond_order" in selected_bond_descriptors:
+                fbonds[idx, :20] = bond_index[a1i, a2i]
+            if "bond_length" in selected_bond_descriptors:
+                fbonds[idx, 20:] = bond_distance[a1i, a2i]
 
     selected_reaction_descriptors = list(set(selected_reaction_descriptors))
     selected_reaction_descriptors.sort()
 
     if "none" not in selected_reaction_descriptors:
+        rxns = rs + ">>" + ps
+        reaction_descriptor_series = reaction_descriptors.loc[rxns]
         for idx, descriptor in enumerate(selected_reaction_descriptors):
             freaction_qm[idx] = reaction_descriptor_series[descriptor]
 
-    return fatoms_geo, fatoms_qm, fbonds_geo, atom_nb, bond_nb, num_nbs, core_mask, freaction_qm
+    return fatoms_geo, fatoms_qm, fbonds, atom_nb, bond_nb, num_nbs, core_mask, freaction_qm
 
 
 def smiles2graph_pr(r_smiles, p_smiles, selected_atom_descriptors=["partial_charge", "fukui_elec", "fukui_neu", "nmr"],
-                    selected_reaction_descriptors=["G", "DE_RP", "G*", "G**"], core_buffer=0):
+                    selected_bond_descriptors=["bond_order", "bond_length"], selected_reaction_descriptors=["G", "DE_RP", "G*", "G**"], 
+                    core_buffer=0):
     rs_core = _get_reacting_core(r_smiles, p_smiles, core_buffer)
-    rs_features = _mol2graph(r_smiles, selected_atom_descriptors, selected_reaction_descriptors, p_smiles, core=rs_core)
+    rs_features = _mol2graph(r_smiles, selected_atom_descriptors, selected_bond_descriptors, 
+                            selected_reaction_descriptors, p_smiles, core=rs_core)
 
     return rs_features, r_smiles
 
@@ -206,10 +219,6 @@ def _get_reacting_core(rs, p, buffer):
 
     core_mapnum = set()
     for a_map in p_dict:
-        # FIXME chiral change
-        # if str(p_dict[a_map].GetChiralTag()) != str(rs_dict[a_map].GetChiralTag()):
-        #    core_mapnum.add(a_map)
-
         a_neighbor_in_p = set([a.GetIntProp('molAtomMapNumber') for a in p_dict[a_map].GetNeighbors()])
         a_neighbor_in_rs = set([a.GetIntProp('molAtomMapNumber') for a in rs_dict[a_map].GetNeighbors()])
         if a_neighbor_in_p != a_neighbor_in_rs:

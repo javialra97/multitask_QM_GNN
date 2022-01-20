@@ -50,7 +50,7 @@ def bond_features(bond):
          bt == Chem.rdchem.BondType.AROMATIC, bond.GetIsConjugated(), bond.IsInRing()], dtype=np.float32)
 
 
-def _mol2graph(rs, selected_atom_descriptors, selected_reaction_descriptors, core=[]):
+def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selected_reaction_descriptors, core=[]):
     mol_rs = Chem.MolFromSmiles(rs)
     if not mol_rs:
         raise ValueError("Could not parse smiles string:", rs)
@@ -105,9 +105,11 @@ def _mol2graph(rs, selected_atom_descriptors, selected_reaction_descriptors, cor
 
 
 def smiles2graph_pr(r_smiles, p_smiles, selected_atom_descriptors=["partial_charge", "fukui_elec", "fukui_neu", "nmr"],
+                    selected_bond_descriptors=["bond_order", "bond_length"],
                     selected_reaction_descriptors=["G", "DE_RP", "G*", "G**"], core_buffer=0):
     rs, rs_core, p_core = _get_reacting_core(r_smiles, p_smiles, core_buffer)
-    rs_features = _mol2graph(r_smiles, selected_atom_descriptors, selected_reaction_descriptors, core=rs_core)
+    rs_features = _mol2graph(r_smiles, selected_atom_descriptors, selected_bond_descriptors,
+                             selected_reaction_descriptors, core=rs_core)
 
     return rs_features, r_smiles
 
@@ -134,10 +136,6 @@ def _get_reacting_core(rs, p, buffer):
 
     core_mapnum = set()
     for a_map in p_dict:
-        # FIXME chiral change
-        # if str(p_dict[a_map].GetChiralTag()) != str(rs_dict[a_map].GetChiralTag()):
-        #    core_mapnum.add(a_map)
-
         a_neighbor_in_p = set([a.GetIntProp('molAtomMapNumber') for a in p_dict[a_map].GetNeighbors()])
         a_neighbor_in_rs = set([a.GetIntProp('molAtomMapNumber') for a in rs_dict[a_map].GetNeighbors()])
         if a_neighbor_in_p != a_neighbor_in_rs:
@@ -188,10 +186,6 @@ def _get_reacting_core(rs, p, buffer):
 
     core_mapnum = set()
     for a_map in p_dict:
-        # FIXME chiral change
-        # if str(p_dict[a_map].GetChiralTag()) != str(rs_dict[a_map].GetChiralTag()):
-        #    core_mapnum.add(a_map)
-
         a_neighbor_in_p = set([a.GetIntProp('molAtomMapNumber') for a in p_dict[a_map].GetNeighbors()])
         a_neighbor_in_rs = set([a.GetIntProp('molAtomMapNumber') for a in rs_dict[a_map].GetNeighbors()])
         if a_neighbor_in_p != a_neighbor_in_rs:
@@ -270,13 +264,6 @@ def get_mask(arr_list):
     return a
 
 
-def smiles2graph_list(smiles_list, idxfunc=lambda x: x.GetIdx()):
-    res = list(map(lambda x: smiles2graph(x, idxfunc), smiles_list))
-    fatom_list, fbond_list, gatom_list, gbond_list, nb_list = zip(*res)
-    return pack2D(fatom_list), pack2D(fbond_list), pack2D_withidx(gatom_list), pack2D_withidx(gbond_list), pack1D(
-        nb_list), get_mask(fatom_list)
-
-
 def get_bond_edits(reactant_smi, product_smi):
     reactants = Chem.MolFromSmiles(reactant_smi)
     products = Chem.MolFromSmiles(product_smi)
@@ -309,9 +296,4 @@ def get_bond_edits(reactant_smi, product_smi):
 
 
 if __name__ == "__main__":
-    # np.set_printoptions(threshold='nan')
-    #"[Br:1][Br:2].[OH:3][c:4]1[cH:5][cH:6][cH:7][cH:8][c:9]1[F:10]")
-    #print(graph)
-    #print(smiles2graph_pr("[Br:1][c:5]1[c:4]([OH:3])[c:9]([F:10])[cH:8][cH:7][cH:6]1", "[Br:1][Br:2].[OH:3][c:4]1[cH:5][cH:6][cH:7][cH:8][c:9]1[F:10]", core_buffer=0))
-    #print(smiles2graph_list(["[Br:2][c:5]1[c:4]([OH:3])[c:9]([F:10])[cH:8][cH:7][cH:6]1", "[Br:1][Br:2].[OH:3][c:4]1[cH:5][cH:6][cH:7][cH:8][c:9]1[F:10"]))
     graph = smiles2graph_pr("[CH3:1][C@@H:2]([NH2:3])[CH2:4][Cl:5].[F-:6]", "[3, 4, 1", core_buffer=0)

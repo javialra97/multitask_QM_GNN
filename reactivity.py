@@ -16,19 +16,30 @@ reactivity_data = pd.read_csv(args.data_path, index_col=0)
 logger = create_logger(name=args.model_dir)
 
 if args.model == 'ml_QM_GNN':
-    # TO DO: include reaction-level descriptors in the ml_QM_GNN model
     from ml_QM_GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
-    from predict_desc.predict_desc import predict_desc, reaction_to_reactants
-    from predict_desc.post_process import min_max_normalize, min_max_normalize_reaction
-    logger.info("The considered atom-condensed descriptors are: {}".format(args.select_atom_descriptors))
-
+    from predict_desc.predict_desc import predict_desc, reaction_to_reactants #, predict_reaction_desc
+    from predict_desc.post_process import min_max_normalize #, min_max_normalize_reaction
+    qmdf = predict_desc(args, normalize=False)
+    qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
+    logger.info(f'The considered atom-condensed descriptors are: {args.select_atom_descriptors}')
+    logger.info(f'The considered bond descriptors are: {args.select_bond_descriptors}')
+    df_reaction_desc = None
+    #df_reaction_desc = predict_reaction_desc(args, normalize=False)
+    #df_reaction_desc.to_csv(os.path.join(args.model_dir, 'reaction_descriptors'))
+    logger.info(f'The considered reaction descriptors are: {args.select_reaction_descriptors}')
 else:
     if args.model == 'QM_GNN':
         from QM_GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
-        from process_desc.post_process import min_max_normalize, reaction_to_reactants, min_max_normalize_reaction
-        logger.info("The considered atom-condensed descriptors are: {}".format(args.select_atom_descriptors))
-        logger.info("The considered reaction descriptors are: {}".format(args.select_atom_descriptors))
+        from process_desc.post_process import min_max_normalize,reaction_to_reactants, min_max_normalize_reaction
+        qmdf = pd.read_pickle(args.atom_desc_path)
+        qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
+        logger.info(f'The considered atom-condensed descriptors are: {args.select_atom_descriptors}')
+        logger.info(f'The considered bond descriptors are: {args.select_bond_descriptors}')
+        df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
+        df_reaction_desc.to_csv(os.path.join(args.model_dir, 'reaction_descriptors'))
+        logger.info(f'The considered reaction descriptors are: {args.select_reaction_descriptors}')
 
+# training of the model
 if not args.predict:
     splits = args.splits
     test_ratio = splits[0]/sum(splits)
@@ -38,16 +49,16 @@ if not args.predict:
     train = reactivity_data[~(reactivity_data.reaction_id.isin(test.reaction_id) |
                               reactivity_data.reaction_id.isin(valid.reaction_id))]
 
-    logger.info(
-        " \n Size train set: {} \n Size validation set: {} \n Size test set: {} \n".format(len(train), len(valid),
-                                                                                           len(test)))
+    logger.info(f' \n Size train set: {len(train)} \n Size validation set: {len(valid)} \n Size test set: {len(test)} \n')
+
+    # initialize the descriptors
     if args.model == 'ml_QM_GNN':
         # Add reaction_descriptors
         qmdf = predict_desc(args, normalize=False)
-        qmdf.to_csv(args.model_dir + "/atom_descriptors.csv")
+        qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
     elif args.model == 'QM_GNN':
         qmdf = pd.read_pickle(args.atom_desc_path)
-        qmdf.to_csv(args.model_dir + "/atom_descriptors.csv")
+        qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
         df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
 
     if args.model == 'ml_QM_GNN' or args.model == 'QM_GNN':
@@ -60,43 +71,48 @@ if not args.predict:
         pickle.dump(reaction_scalers, open(os.path.join(args.model_dir, 'reaction_desc_scalers.pickle'), 'wb'))
         initialize_reaction_descriptors(df=df_reaction_desc)
 
+    # process the training data
     train_rxn_id = train['reaction_id'].values
     train_smiles = train.rxn_smiles.str.split('>', expand=True)[0].values
-    train_product = train['{}'.format(args.rxn_smiles_column)].str.split('>', expand=True)[2].values
-    train_target = train['{}'.format(args.target_column)].values
+    train_product = train[f'{args.rxn_smiles_column}'].str.split('>', expand=True)[2].values
+    train_target = train[f'{args.target_column}'].values
 
+    # scale target values based on target distribution in the training set
     target_scaler = scale_targets(train_target.copy())
     pickle.dump(target_scaler, open(os.path.join(args.model_dir, 'target_scaler.pickle'), 'wb'))
 
-    train_target_scaled = train['{}'.format(args.target_column)].apply(
-        lambda x: target_scaler.transform([[x]])[0][0]).values
+    train_target_scaled = train[f'{args.target_column}'].apply(lambda x: target_scaler.transform([[x]])[0][0]).values
 
+    # process the validation data
     valid_rxn_id = valid['reaction_id'].values
     valid_smiles = valid.rxn_smiles.str.split('>', expand=True)[0].values
-    valid_product = valid['{}'.format(args.rxn_smiles_column)].str.split('>', expand=True)[2].values
-    valid_target = valid['{}'.format(args.target_column)].values
+    valid_product = valid[f'{args.rxn_smiles_column}'].str.split('>', expand=True)[2].values
+    valid_target = valid[f'{args.target_column}'].values
 
-    valid_target_scaled = valid['{}'.format(args.target_column)].apply(
+    valid_target_scaled = valid[f'{args.target_column}'].apply(
         lambda x: target_scaler.transform([[x]])[0][0]).values
 
+   # set up dataloaders for training and validation sets
     train_gen = dataloader(train_smiles, train_product, train_rxn_id, train_target_scaled, args.selec_batch_size,
-                           args.select_atom_descriptors, args.select_reaction_descriptors)
+                           args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors)
     train_steps = np.ceil(len(train_smiles) / args.selec_batch_size).astype(int)
 
     valid_gen = dataloader(valid_smiles, valid_product, valid_rxn_id, valid_target_scaled, args.selec_batch_size,
-                           args.select_atom_descriptors, args.select_reaction_descriptors)
+                           args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors)
     valid_steps = np.ceil(len(valid_smiles) / args.selec_batch_size).astype(int)
 
     for x, _ in dataloader([train_smiles[0]], [train_product[0]], [train_rxn_id[0]], [train_target_scaled[0]], 1,
-                           args.select_atom_descriptors, args.select_reaction_descriptors):
+                           args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors):
         x_build = x
 
+# only testing
 else:
+    # process the testing data 
     test = reactivity_data
     test_rxn_id = test['reaction_id'].values
     test_smiles = test.rxn_smiles.str.split('>', expand=True)[0].values
-    test_product = test['{}'.format(args.rxn_smiles_column)].str.split('>', expand=True)[2].values
-    test_target = test['{}'.format(args.target_column)].values
+    test_product = test[f'{args.rxn_smiles_column}'].str.split('>', expand=True)[2].values
+    test_target = test[f'{args.target_column}'].values
 
     if args.model == 'ml_QM_GNN':
         # TO DO: Write function to enable prediction of reaction_descs
@@ -114,26 +130,27 @@ else:
 
     target_scaler = pickle.load(open(os.path.join(args.model_dir, 'target_scaler.pickle'), 'rb'))
 
+    # set up dataloader for test set
     test_gen = dataloader(test_smiles, test_product, test_rxn_id, test_target, args.selec_batch_size,
-                          args.select_atom_descriptors, args.select_reaction_descriptors, predict=True)
+                          args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors, predict=True)
     test_steps = np.ceil(len(test_smiles) / args.selec_batch_size).astype(int)
 
     # need an input to initialize the graph network
     for x in dataloader([test_smiles[0]], [test_product[0]], [test_rxn_id[0]], [test_target[0]], 1,
-                        args.select_atom_descriptors, args.select_reaction_descriptors, predict=True):
+                        args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors, predict=True):
         x_build = x
 
 save_name = os.path.join(args.model_dir, 'best_model.hdf5')
 
+# set up the model for evaluation
 model = regressor(args.feature, args.depth, args.select_atom_descriptors, args.select_reaction_descriptors)
 opt = tf.keras.optimizers.Adam(lr=args.ini_lr, clipnorm=5)
 model.compile(
     optimizer=opt,
     loss='mean_squared_error',
-    metrics=[tf.keras.metrics.RootMeanSquaredError(
-        name='root_mean_squared_error', dtype=None), tf.keras.metrics.MeanAbsoluteError(
-        name='mean_absolute_error', dtype=None), ]
-)
+    )
+
+# initialize the model by running x_build
 model.predict_on_batch(x_build)
 model.summary()
 
@@ -147,6 +164,7 @@ reduce_lr = LearningRateScheduler(lr_multiply_ratio(args.ini_lr, args.lr_ratio),
 callbacks = [checkpoint, reduce_lr]
 
 if not args.predict:
+    # set up the model for training
     hist = model.fit_generator(
         train_gen, steps_per_epoch=train_steps, epochs=args.selec_epochs,
         validation_data=valid_gen, validation_steps=valid_steps,
@@ -155,10 +173,9 @@ if not args.predict:
         workers=args.workers
     )
 else:
+    # evaluate predictions
     predicted = []
-    #masks = []
     for x in tqdm(test_gen, total=int(len(test_smiles) / args.selec_batch_size)):
-        #masks.append(x[-2])
         out = model.predict_on_batch(x)
         y_predicted = target_scaler.inverse_transform([[out]])[0][0]
         predicted.append(y_predicted)
