@@ -1,0 +1,10 @@
+QM_GNN/WLN/__pycache__
+process_desc/__pycache__
+QM_GNN/graph_utils/__pycache__
+process_desc/__pycache__
+output/
+.DS_Store
+datasets/.DS_Store
+utils/__pycache__/
+descriptors/.DS_Store
+test
