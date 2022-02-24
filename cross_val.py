@@ -1,5 +1,6 @@
 import os
 import pickle
+from sqlite3 import DataError
 
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
@@ -39,8 +40,17 @@ else:
         df_reaction_desc.to_csv(os.path.join(args.model_dir, 'reaction_descriptors'))
         logger.info(f'The considered reaction descriptors are: {args.select_reaction_descriptors}')
 
-df = pd.read_csv(args.data_path, index_col=0)
-df = df.sample(frac=1, random_state=2)
+if args.data_path:
+    df = pd.read_csv(args.data_path, index_col=0)
+    df = df.sample(frac=1, random_state=args.random_state)
+# selective sampling
+elif args.train_valid_set_path and args.test_set_path:
+    df = pd.read_csv(args.train_valid_set_path, index_col=0)
+    df = df.sample(frac=1, random_state=args.random_state)
+    test = pd.read_csv(args.test_set_path, index_col=0)
+else:
+    raise Exception('Paths are not provided correctly!')
+
 
 # split df into k_fold groups
 k_fold_arange = np.linspace(0, len(df), args.k_fold+1).astype(int)
@@ -51,14 +61,18 @@ mae_list = []
 
 for i in range(args.k_fold):
     # split data for fold
-    test = df[k_fold_arange[i]:k_fold_arange[i+1]]
-    valid = df[~df.reaction_id.isin(test.reaction_id)].sample(frac=1/(args.k_fold-1), random_state=1)
-    train = df[~(df.reaction_id.isin(test.reaction_id) | df.reaction_id.isin(valid.reaction_id))]
+    if args.data_path:
+        test = df[k_fold_arange[i]:k_fold_arange[i+1]]
+        valid = df[~df.reaction_id.isin(test.reaction_id)].sample(frac=1/(args.k_fold-1), random_state=args.random_state)
+        train = df[~(df.reaction_id.isin(test.reaction_id) | df.reaction_id.isin(valid.reaction_id))]
+    if args.train_valid_set_path:
+        valid = df.sample(frac=1/(args.k_fold-1), random_state=args.random_state)
+        train = df[~(df.reaction_id.isin(valid.reaction_id))]
 
     # downsample training and validation sets in case args.sample keyword has been selected
     if args.sample:
         try:
-            train = train.sample(n=args.sample, random_state=1)
+            train = train.sample(n=args.sample, random_state=args.random_state)
             valid = valid.sample(n=math.ceil(int(args.sample)/2))
         except Exception:
             pass
