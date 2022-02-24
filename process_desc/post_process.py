@@ -6,9 +6,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 tqdm.pandas()
 
-#REACTION_DESCRIPTORS = ["G", "DE_RP", "G_alt1", "G_alt2"]
-#GLOBAL_SCALE = ['partial_charge', 'fukui_neu', 'fukui_elec','parr_elec','parr_neu','spin_dens','spin_dens_triplet']
-ATOM_SCALE = ['NMR']
+ATOM_SCALE = ['NMR', 'sasa']
 
 
 def reaction_to_reactants(reactions):
@@ -20,22 +18,22 @@ def reaction_to_reactants(reactions):
 
 
 def filter_out_nucleophiles(df):
-    df["molecular_charge"] = df["smiles"].apply(lambda x: Chem.GetFormalCharge(Chem.MolFromSmiles(x)))
-    df = df[df["molecular_charge"] == 0]
+    df['molecular_charge'] = df['smiles'].apply(lambda x: Chem.GetFormalCharge(Chem.MolFromSmiles(x)))
+    df = df[df['molecular_charge'] == 0]
 
     return df
 
 
 def modify_scaled_df(df, scalers):
     for index in df.index:
-        if "H-" in df.loc[index, "smiles"]:
-            df.loc[index, "NMR"] = np.array([(27.7189 - scalers['NMR']["H"].data_min_[0]) / (scalers['NMR']["H"].data_max_[0] - scalers['NMR']["H"].data_min_[0])])
+        if 'H-' in df.loc[index, "smiles"]:
+            df.loc[index, "NMR"] = np.array([(27.7189 - scalers['NMR']['H'].data_min_[0]) / (scalers['NMR']['H'].data_max_[0] - scalers['NMR']['H'].data_min_[0])])
         elif "F-" in df.loc[index, "smiles"]:
-            df.loc[index, "NMR"] = np.array([(481.6514 - scalers['NMR']["F"].data_min_[0]) / (scalers['NMR']["F"].data_max_[0] - scalers['NMR']["F"].data_min_[0])])
+            df.loc[index, "NMR"] = np.array([(481.6514 - scalers['NMR']['F'].data_min_[0]) / (scalers['NMR']['F'].data_max_[0] - scalers['NMR']['F'].data_min_[0])])
         elif "Cl-" in df.loc[index, "smiles"]:
-            df.loc[index, "NMR"] = np.array([(1150.4265 - scalers['NMR']["Cl"].data_min_[0]) / (scalers['NMR']["Cl"].data_max_[0] - scalers['NMR']["Cl"].data_min_[0])])
+            df.loc[index, "NMR"] = np.array([(1150.4265 - scalers['NMR']['Cl'].data_min_[0]) / (scalers['NMR']['Cl'].data_max_[0] - scalers['NMR']['Cl'].data_min_[0])])
         elif "Br-" in df.loc[index, "smiles"]:
-            df.loc[index, "NMR"] = np.array([(3126.8978 - scalers['NMR']["Br"].data_min_[0]) / (scalers['NMR']["Br"].data_max_[0] - scalers['NMR']["Br"].data_min_[0])])
+            df.loc[index, "NMR"] = np.array([(3126.8978 - scalers['NMR']['Br'].data_min_[0]) / (scalers['NMR']['Br'].data_max_[0] - scalers['NMR']['Br'].data_min_[0])])
 
     return df
 
@@ -67,7 +65,6 @@ def min_max_normalize(df, scalers=None, train_smiles=None):
         elif column in ['bond_order', 'bond_length']:
             df[f'{column}_matrix'] = df.apply(lambda x: bond_to_matrix(x['smiles'], x['bond_order']), axis=1)
 
-    df = modify_scaled_df(df, scalers)
     df = df[[column for column in df.columns if column not in ['atoms', 'bond_order', 'bond_length']]]
     df = df.set_index('smiles')
 

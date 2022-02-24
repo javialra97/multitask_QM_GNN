@@ -8,3 +8,4 @@ datasets/.DS_Store
 utils/__pycache__/
 descriptors/.DS_Store
 test
+QM_GNN/.DS_Store

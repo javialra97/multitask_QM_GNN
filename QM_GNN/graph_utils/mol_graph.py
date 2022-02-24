@@ -132,6 +132,13 @@ def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selecte
             nmr = qm_series['NMR'].reshape(-1, 1)
             nmr = np.apply_along_axis(rbf_expansion, -1, nmr, 0.0, 0.05, 20)
 
+            if 'sasa' in selected_atom_descriptors or 'pint' in selected_atom_descriptors:
+                sasa = qm_series['sasa'].reshape(-1,1)
+                sasa = np.apply_along_axis(rbf_expansion, -1, sasa, 0.0, 0.05, 20)
+
+                pint = qm_series['pint'].reshape(-1,1)
+                pint = np.apply_along_axis(rbf_expansion, -1, pint, 0.0, 0.05, 20) 
+
             selected_atom_descriptors = list(set(selected_atom_descriptors))
             selected_atom_descriptors.sort()
 
@@ -170,16 +177,16 @@ def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selecte
             num_nbs[a2] += 1
 
             fbonds[idx, :6] = bond_features(bond)
-            if "bond_order" in selected_bond_descriptors:
+            if 'bond_order' in selected_bond_descriptors:
                 fbonds[idx, :20] = bond_index[a1i, a2i]
-            if "bond_length" in selected_bond_descriptors:
+            if 'bond_length' in selected_bond_descriptors:
                 fbonds[idx, 20:] = bond_distance[a1i, a2i]
 
     selected_reaction_descriptors = list(set(selected_reaction_descriptors))
     selected_reaction_descriptors.sort()
 
-    if "none" not in selected_reaction_descriptors:
-        rxns = rs + ">>" + ps
+    if 'none' not in selected_reaction_descriptors:
+        rxns = rs + '>>' + ps
         reaction_descriptor_series = reaction_descriptors.loc[rxns]
         for idx, descriptor in enumerate(selected_reaction_descriptors):
             freaction_qm[idx] = reaction_descriptor_series[descriptor]
@@ -187,8 +194,8 @@ def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selecte
     return fatoms_geo, fatoms_qm, fbonds, atom_nb, bond_nb, num_nbs, core_mask, freaction_qm
 
 
-def smiles2graph_pr(r_smiles, p_smiles, selected_atom_descriptors=["partial_charge", "fukui_elec", "fukui_neu", "nmr"],
-                    selected_bond_descriptors=["bond_order", "bond_length"], selected_reaction_descriptors=["G", "DE_RP", "G*", "G**"], 
+def smiles2graph_pr(r_smiles, p_smiles, selected_atom_descriptors=['partial_charge', 'fukui_elec', 'fukui_neu', 'nmr'],
+                    selected_bond_descriptors=['bond_order', 'bond_length'], selected_reaction_descriptors=['G', 'E_r', 'G_alt1', 'G_alt2'], 
                     core_buffer=0):
     rs_core = _get_reacting_core(r_smiles, p_smiles, core_buffer)
     rs_features = _mol2graph(r_smiles, selected_atom_descriptors, selected_bond_descriptors, 
