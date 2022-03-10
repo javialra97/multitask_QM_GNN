@@ -12,7 +12,6 @@ from tqdm import tqdm
 from utils import lr_multiply_ratio, parse_args, create_logger, scale_targets
 
 args, dataloader, regressor = parse_args(cross_val=True)
-reactivity_data = pd.read_csv(args.data_path, index_col=0)
 
 logger = create_logger(name=args.model_dir)
 
@@ -40,11 +39,11 @@ else:
         df_reaction_desc.to_csv(os.path.join(args.model_dir, 'reaction_descriptors'))
         logger.info(f'The considered reaction descriptors are: {args.select_reaction_descriptors}')
 
-if args.data_path:
+if args.data_path is not None:
     df = pd.read_csv(args.data_path, index_col=0)
     df = df.sample(frac=1, random_state=args.random_state)
 # selective sampling
-elif args.train_valid_set_path and args.test_set_path:
+elif args.train_valid_set_path is not None and args.test_set_path is not None:
     df = pd.read_csv(args.train_valid_set_path, index_col=0)
     df = df.sample(frac=1, random_state=args.random_state)
     test = pd.read_csv(args.test_set_path, index_col=0)
@@ -61,11 +60,11 @@ mae_list = []
 
 for i in range(args.k_fold):
     # split data for fold
-    if args.data_path:
+    if args.data_path is not None:
         test = df[k_fold_arange[i]:k_fold_arange[i+1]]
         valid = df[~df.reaction_id.isin(test.reaction_id)].sample(frac=1/(args.k_fold-1), random_state=args.random_state)
         train = df[~(df.reaction_id.isin(test.reaction_id) | df.reaction_id.isin(valid.reaction_id))]
-    if args.train_valid_set_path:
+    elif args.train_valid_set_path is not None:
         valid = df.sample(frac=1/(args.k_fold-1), random_state=args.random_state)
         train = df[~(df.reaction_id.isin(valid.reaction_id))]
 
