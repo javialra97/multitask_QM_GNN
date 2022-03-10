@@ -32,7 +32,7 @@ def parse_args(cross_val=False):
                         help='path to the file storing the atom-condensed descriptors (must be provided when using QM_GNN model)')
     parser.add_argument('--reaction_desc_path', default=None,
                         help='path to the file storing the reaction descriptors (must be provided when using QM_GNN model)')
-    parser.add_argument('--data_path', default='data/regio_nonstereo_12k_QM', type=str,
+    parser.add_argument('--data_path', default=None, type=str,
                         help='Path to reaction data')
     parser.add_argument('--ini_lr', default=0.001, type=float,
                         help='Initial learning rate')
@@ -52,6 +52,12 @@ def parse_args(cross_val=False):
                         help='(Optional) Selection of reaction descriptors to feed to the (ml_)QM_GNN model')
     parser.add_argument('--select_bond_descriptors', nargs='+', default=['bond_order', 'bond_length'],
                         help='(Optional) Selection of bond descriptors to feed to the (ml_)QM_GNN model')
+    parser.add_argument('--train_valid_set_path', type=str, default=None,
+                        help='In case of selective sampling, indicates path to combined training and validation set csv-file')
+    parser.add_argument('--test_set_path', type=str, default=None,
+                        help='In case of selective sampling, indicates path to the test set csv-file')
+    parser.add_argument('--random_state', type=int, default=0,
+                        help='Random state to be selected for sampling/shuffling')
 
     if cross_val:
         parser.add_argument('--k_fold', default=10, type=int,
