@@ -1,6 +1,5 @@
 import os
 import pickle
-from sqlite3 import DataError
 
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
@@ -17,20 +16,20 @@ logger = create_logger(name=args.model_dir)
 
 if args.model == 'ml_QM_GNN':
     from ml_QM_GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
-    from predict_desc.predict_desc import predict_desc, predict_reaction_desc, reaction_to_reactants
-    from predict_desc.post_process import min_max_normalize, min_max_normalize_reaction
-    qmdf = predict_desc(args, normalize=False)
+    from process_descs import predict_atom_descs, predict_reaction_descs, reaction_to_reactants, \
+                            min_max_normalize_atom_descs, min_max_normalize_reaction_descs
+    qmdf = predict_atom_descs(args, normalize=False)
     qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
     logger.info(f'The considered atom-condensed descriptors are: {args.select_atom_descriptors}')
     logger.info(f'The considered bond descriptors are: {args.select_bond_descriptors}')
     df_reaction_desc = None
-    #df_reaction_desc = predict_reaction_desc(args, normalize=False)
+    #df_reaction_desc = predict_reaction_descs(args, normalize=False)
     #df_reaction_desc.to_csv(os.path.join(args.model_dir, 'reaction_descriptors'))
     logger.info(f'The considered reaction descriptors are: {args.select_reaction_descriptors}')
 else:
     if args.model == 'QM_GNN':
         from QM_GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
-        from process_desc.post_process import min_max_normalize,reaction_to_reactants, min_max_normalize_reaction
+        from process_descs import min_max_normalize_atom_descs, reaction_to_reactants, min_max_normalize_reaction_descs
         qmdf = pd.read_pickle(args.atom_desc_path)
         qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
         logger.info(f'The considered atom-condensed descriptors are: {args.select_atom_descriptors}')
@@ -98,9 +97,9 @@ for i in range(args.k_fold):
     # set up the atom- and reaction-level descriptors
     if args.model == 'ml_QM_GNN' or args.model == 'QM_GNN':
         train_reactants = reaction_to_reactants(train['rxn_smiles'].tolist())
-        qmdf_temp, _ = min_max_normalize(qmdf.copy(), train_smiles=train_reactants)
+        qmdf_temp, _ = min_max_normalize_atom_descs(qmdf.copy(), train_smiles=train_reactants)
         initialize_qm_descriptors(df=qmdf_temp)
-        df_reaction_desc_temp, _ = min_max_normalize_reaction(df_reaction_desc.copy(),
+        df_reaction_desc_temp, _ = min_max_normalize_reaction_descs(df_reaction_desc.copy(),
                                                               train_smiles=train['rxn_smiles'].tolist())
         initialize_reaction_descriptors(df=df_reaction_desc_temp)
 
@@ -114,7 +113,7 @@ for i in range(args.k_fold):
 
     # set up tensorflow model
     model = regressor(args.feature, args.depth, args.select_atom_descriptors, args.select_reaction_descriptors)
-    opt = tf.keras.optimizers.Adam(lr=args.ini_lr, clipnorm=5)
+    opt = tf.keras.optimizers.Adam(learning_rate=args.ini_lr, clipnorm=5)
     model.compile(
         optimizer=opt,
         loss='mean_squared_error',
@@ -128,7 +127,7 @@ for i in range(args.k_fold):
 
     # run training and save weights
     print(f'training the {i}th iteration')
-    hist = model.fit_generator(
+    hist = model.fit(
         train_gen, steps_per_epoch=train_steps, epochs=args.selec_epochs,
         validation_data=valid_gen, validation_steps=valid_steps,
         callbacks=callbacks,

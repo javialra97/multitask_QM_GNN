@@ -38,7 +38,6 @@ class WLN_Layer(tf.keras.layers.Layer):
 
     def call(self, graph_inputs):
         input_atom, input_bond, atom_graph, bond_graph, num_nbs, node_mask, _, _ = graph_inputs
-        #calculate the initial atom features using only its own features (no neighbors)
         atom_features = self.atom_features(input_atom)
         layers = []
         for i in range(self.depth):

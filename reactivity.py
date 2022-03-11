@@ -17,9 +17,9 @@ logger = create_logger(name=args.model_dir)
 
 if args.model == 'ml_QM_GNN':
     from ml_QM_GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
-    from predict_desc.predict_desc import predict_desc, reaction_to_reactants #, predict_reaction_desc
-    from predict_desc.post_process import min_max_normalize #, min_max_normalize_reaction
-    qmdf = predict_desc(args, normalize=False)
+    from process_descs import predict_atom_descs, predict_reaction_descs, reaction_to_reactants, \
+                            min_max_normalize_atom_descs, min_max_normalize_reaction_descs
+    qmdf = predict_atom_descs(args, normalize=False)
     qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
     logger.info(f'The considered atom-condensed descriptors are: {args.select_atom_descriptors}')
     logger.info(f'The considered bond descriptors are: {args.select_bond_descriptors}')
@@ -30,7 +30,7 @@ if args.model == 'ml_QM_GNN':
 else:
     if args.model == 'QM_GNN':
         from QM_GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
-        from process_desc.post_process import min_max_normalize,reaction_to_reactants, min_max_normalize_reaction
+        from process_descs import min_max_normalize_atom_descs, reaction_to_reactants, min_max_normalize_reaction_descs
         qmdf = pd.read_pickle(args.atom_desc_path)
         qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
         logger.info(f'The considered atom-condensed descriptors are: {args.select_atom_descriptors}')
@@ -54,7 +54,7 @@ if not args.predict:
     # initialize the descriptors
     if args.model == 'ml_QM_GNN':
         # Add reaction_descriptors
-        qmdf = predict_desc(args, normalize=False)
+        qmdf = predict_atom_descs(args, normalize=False)
         qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
     elif args.model == 'QM_GNN':
         qmdf = pd.read_pickle(args.atom_desc_path)
@@ -63,10 +63,10 @@ if not args.predict:
 
     if args.model == 'ml_QM_GNN' or args.model == 'QM_GNN':
         train_reactants = reaction_to_reactants(train['rxn_smiles'].tolist())
-        qmdf, atom_scalers = min_max_normalize(qmdf, train_smiles=train_reactants)
+        qmdf, atom_scalers = min_max_normalize_atom_descs(qmdf, train_smiles=train_reactants)
         initialize_qm_descriptors(df=qmdf)
         pickle.dump(atom_scalers, open(os.path.join(args.model_dir, 'atom_scalers.pickle'), 'wb'))
-        df_reaction_desc, reaction_scalers = min_max_normalize_reaction(df_reaction_desc.copy(),
+        df_reaction_desc, reaction_scalers = min_max_normalize_reaction_descs(df_reaction_desc.copy(),
                                                               train_smiles=train['rxn_smiles'].tolist())
         pickle.dump(reaction_scalers, open(os.path.join(args.model_dir, 'reaction_desc_scalers.pickle'), 'wb'))
         initialize_reaction_descriptors(df=df_reaction_desc)
@@ -116,16 +116,16 @@ else:
 
     if args.model == 'ml_QM_GNN':
         # TO DO: Write function to enable prediction of reaction_descs
-        qmdf = predict_desc(args)
+        qmdf = predict_atom_descs(args)
         initialize_qm_descriptors(df=qmdf)
     if args.model == 'QM_GNN':
         qmdf = pd.read_pickle(args.atom_desc_path)
         atom_scalers = pickle.load(open(os.path.join(args.model_dir, 'atom_scalers.pickle'), 'rb'))
-        qmdf, _ = min_max_normalize(qmdf, scalers=atom_scalers)
+        qmdf, _ = min_max_normalize_atom_descs(qmdf, scalers=atom_scalers)
         initialize_qm_descriptors(df=qmdf)
         df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
         reaction_scalers = pickle.load(open(os.path.join(args.model_dir, 'reaction_desc_scalers.pickle'), 'rb'))
-        df_reaction_desc, _ = min_max_normalize_reaction(df_reaction_desc, scalers=reaction_scalers)
+        df_reaction_desc, _ = min_max_normalize_reaction_descs(df_reaction_desc, scalers=reaction_scalers)
         initialize_reaction_descriptors(df=df_reaction_desc)
 
     target_scaler = pickle.load(open(os.path.join(args.model_dir, 'target_scaler.pickle'), 'rb'))
@@ -144,7 +144,7 @@ save_name = os.path.join(args.model_dir, 'best_model.hdf5')
 
 # set up the model for evaluation
 model = regressor(args.feature, args.depth, args.select_atom_descriptors, args.select_reaction_descriptors)
-opt = tf.keras.optimizers.Adam(lr=args.ini_lr, clipnorm=5)
+opt = tf.keras.optimizers.Adam(learning_rate=args.ini_lr, clipnorm=5)
 model.compile(
     optimizer=opt,
     loss='mean_squared_error',
@@ -165,7 +165,7 @@ callbacks = [checkpoint, reduce_lr]
 
 if not args.predict:
     # set up the model for training
-    hist = model.fit_generator(
+    hist = model.fit(
         train_gen, steps_per_epoch=train_steps, epochs=args.selec_epochs,
         validation_data=valid_gen, validation_steps=valid_steps,
         callbacks=callbacks,

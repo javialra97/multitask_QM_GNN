@@ -184,7 +184,7 @@ def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selecte
 
 
 def smiles2graph_pr(r_smiles, p_smiles, selected_atom_descriptors=["partial_charge", "fukui_elec", "fukui_neu", "nmr"],
-                    selected_reaction_descriptors=["G", "DE_RP", "G*", "G**"], selected_bond_descriptors=["bond_order", "bond_length"], 
+                    selected_reaction_descriptors=["G", "E_r", "G*", "G**"], selected_bond_descriptors=["bond_order", "bond_length"], 
                     core_buffer=0):
     rs_core = _get_reacting_core(r_smiles, p_smiles, core_buffer)
     rs_features = _mol2graph(r_smiles, selected_atom_descriptors, selected_reaction_descriptors, selected_bond_descriptors, 
