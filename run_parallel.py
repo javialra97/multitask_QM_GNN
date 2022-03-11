@@ -9,176 +9,54 @@ atom_desc_file = "atom_desc_cycloadd_wln.pkl"
 reaction_desc_file = "reaction_desc_cycloadd_wln.pkl"
 
 
-def run_experiments_with_sample(partition_scheme, atom_desc_file, reaction_desc_file, sample):
+def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample=None):
     os.makedirs("log_test/{}".format(partition_scheme), exist_ok=True)
     log_dir = "log_test/{}".format(partition_scheme)
     os.makedirs(cross_val_dir + "/" + partition_scheme, exist_ok=True)
 
-    experiments = [
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/GNN'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', 'none',
-            '--select_reaction_descriptors', 'none', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample, 
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/only_atomic_desc'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--select_reaction_descriptors',
-            'none', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/only_reaction_desc'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "none",
-            '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file), '--reaction_desc_path',
-            'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_full'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--atom_desc_path',
-            'descriptors/{}'.format(atom_desc_file), '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file),
-            '--k_fold', "5", "--sample", sample, "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/trad'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "fukui_elec", "fukui_neu", '--atom_desc_path',
-            'descriptors/{}'.format(atom_desc_file), '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file),
-            '--k_fold', "5", "--sample", sample, "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_hard'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_soft'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "spin_dens",
-            "spin_dens_triplet", "fukui_elec", "fukui_neu", '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_GRP'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--select_reaction_descriptors',
-            'G', 'E_r', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_RP'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--select_reaction_descriptors',
-            'E_r', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_G_alt1'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--select_reaction_descriptors',
-            'G_alt1', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_G_alt2'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--select_reaction_descriptors',
-            'G_alt2', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/none_RP'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "none",
-            '--select_reaction_descriptors', 'E_r', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_hard_morfeus'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", 'sasa', 'pint', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_morfeus'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', 'sasa', 'pint', 
-            '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--sample", sample,
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_full_morfeus'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", 'sasa', 'pint', '--atom_desc_path',
-            'descriptors/{}'.format(atom_desc_file), '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file),
-            '--k_fold', "5", "--sample", sample, "--select_bond_descriptors", "none"]
-        ]
-
-    launch_jobs(experiments, log_dir)
-
-
-def run_experiments_no_sample(partition_scheme, atom_desc_file, reaction_desc_file):
-    os.makedirs("log_test/{}".format(partition_scheme), exist_ok=True)
-    log_dir = "log_test/{}".format(partition_scheme)
-    os.makedirs(cross_val_dir + "/" + partition_scheme, exist_ok=True)
+    fixed_command_list = ['python', 'cross_val.py', '-m', 'QM_GNN', '--atom_desc_path', f'descriptors/{atom_desc_file}',
+            '--reaction_desc_path', f'descriptors/{reaction_desc_file}', '--k_fold', '5', '--select_bond_descriptors', 'none']
 
     experiments = [
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/GNN'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', 'none',
-            '--select_reaction_descriptors', 'none', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/only_atomic_desc'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--select_reaction_descriptors',
-            'none', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/only_reaction_desc'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "none",
-            '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file), '--reaction_desc_path',
-            'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_full'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--atom_desc_path',
-            'descriptors/{}'.format(atom_desc_file), '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file),
-            '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/trad'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "fukui_elec", "fukui_neu", '--atom_desc_path',
-            'descriptors/{}'.format(atom_desc_file), '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file),
-            '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_hard'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_soft'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "spin_dens",
-            "spin_dens_triplet", "fukui_elec", "fukui_neu", '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_GRP'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--select_reaction_descriptors',
-            'G', 'E_r', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_RP'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--select_reaction_descriptors',
-            'E_r', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_G_alt1'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--select_reaction_descriptors',
-            'G_alt1', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_G_alt2'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", '--select_reaction_descriptors',
-            'G_alt2', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/none_RP'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "none",
-            '--select_reaction_descriptors', 'E_r', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5", "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_hard_morfeus'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", 'sasa', 'pint', '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5",
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_morfeus'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', 'sasa', 'pint', 
-            '--atom_desc_path', 'descriptors/{}'.format(atom_desc_file),
-            '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file), '--k_fold', "5",
-            "--select_bond_descriptors", "none"],
-        ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', 'datasets/{}'.format(dataset), '--model_dir',
-            '{}/{}/all_full_morfeus'.format(cross_val_dir, partition_scheme), '--select_atom_descriptors', "nmr",
-            "partial_charge", "spin_dens", "spin_dens_triplet", "fukui_elec", "fukui_neu", 'sasa', 'pint', '--atom_desc_path',
-            'descriptors/{}'.format(atom_desc_file), '--reaction_desc_path', 'descriptors/{}'.format(reaction_desc_file),
-            '--k_fold', "5", "--select_bond_descriptors", "none"]
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/GNN', '--select_atom_descriptors', 'none', '--select_reaction_descriptors', 'none'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/only_atomic_desc', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', '--select_reaction_descriptors', 'none'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/only_reaction_desc', '--select_atom_descriptors', 'none'],
+        ['--model_dir',  f'{cross_val_dir}/{partition_scheme}/all_full', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu'],
+        ['--model_dir',  f'{cross_val_dir}/{partition_scheme}/trad', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'fukui_elec', 'fukui_neu'],
+        ['--model_dir',  f'{cross_val_dir}/{partition_scheme}/all_hard', '--select_atom_descriptors', 'nmr', 'partial_charge'],
+        ['--model_dir'f'{cross_val_dir}/{partition_scheme}/all_soft', '--select_atom_descriptors', 'spin_dens',
+            'spin_dens_triplet', 'fukui_elec', 'fukui_neu'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/GRP_full', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', '--select_reaction_descriptors', 'G', 'E_r',],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/RP_full', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', '--select_reaction_descriptors', 'E_r'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/G_alt1_full', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', '--select_reaction_descriptors', 'G_alt1'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/G_alt2_full', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', '--select_reaction_descriptors', 'G_alt2'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/none_RP','--select_atom_descriptors', 'none',
+            '--select_reaction_descriptors', 'E_r'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/all_hard_morfeus', '--select_atom_descriptors', 'nmr', 'partial_charge', 'sasa', 'pint'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/all_morfeus', '--select_atom_descriptors', 'sasa', 'pint'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/all_Gs', '--select_atom_descriptors', 'nmr', 'partial_charge', 
+            'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', '--select_reaction_descriptors', 'G', 'G_alt1', 'G_alt2'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/trad_morfeus_Gs', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'fukui_elec', 'fukui_neu', 'sasa', 'pint', '--select_reaction_descriptors', 'G', 'G_alt1', 'G_alt2'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/all_full_morfeus', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', 'sasa', 'pint']
         ]
 
-    launch_jobs(experiments, log_dir)
+    command_lines = []
+    for experiment in experiments:
+        if sample:
+            command_lines.append(fixed_command_list + experiment + ['--sample', sample])
+        else:
+            command_lines.append(fixed_command_list + experiment)
+
+    launch_jobs(command_lines, log_dir)
 
 
 def launch_jobs(experiments, log_dir):
@@ -210,9 +88,9 @@ def main():
     os.makedirs(cross_val_dir, exist_ok=True)
     os.makedirs("log_test", exist_ok=True)
 
-    run_experiments_with_sample('100_points', atom_desc_file, reaction_desc_file, sample=str(100))
-    run_experiments_with_sample('400_points', atom_desc_file, reaction_desc_file, sample=str(400))
-    run_experiments_no_sample('all_points', atom_desc_file, reaction_desc_file)
+    run_experiments('100_points', atom_desc_file, reaction_desc_file, sample=str(100))
+    run_experiments('400_points', atom_desc_file, reaction_desc_file, sample=str(400))
+    run_experiments('all_points', atom_desc_file, reaction_desc_file)
 
 
 main()
