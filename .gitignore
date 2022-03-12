@@ -1,7 +1,6 @@
 QM_GNN/WLN/__pycache__
-process_desc/__pycache__
 QM_GNN/graph_utils/__pycache__
-process_desc/__pycache__
+process_descs/__pycache__
 output/
 .DS_Store
 datasets/.DS_Store
