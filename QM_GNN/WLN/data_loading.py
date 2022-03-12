@@ -59,14 +59,17 @@ class Graph_DataLoader(Sequence):
                             self.selected_reaction_descriptors)])
             target_extend.extend([target])
 
-        rs_extends, smiles_extend = zip(*prs_extend)
+        prs_extends, smiles_extend = zip(*prs_extend)
 
-        fatom_list, fatom_qm_list, fbond_list, gatom_list, gbond_list, nb_list, core_mask, freaction_qm = \
-            zip(*rs_extends)
+        fatom_list, fatom_qm_list, fbond_list, gatom_list, gbond_list, nb_list, core_mask, freaction_qm, \
+        fatom_list_p, fbond_list_p, gatom_list_p, gbond_list_p, nb_list_p = zip(*prs_extends)
 
         res_graph_inputs = (pack2D(fatom_list), pack2D(fbond_list), pack2D_withidx(gatom_list),
                             pack2D_withidx(gbond_list), pack1D(nb_list), get_mask(fatom_list),
-                            binary_features_batch(smiles_extend), pack1D(core_mask), pack2D(fatom_qm_list), pack1D(freaction_qm))
+                            binary_features_batch(smiles_extend), pack1D(core_mask), pack2D(fatom_qm_list), 
+                            pack1D(freaction_qm), pack2D(fatom_list_p), pack2D(fbond_list_p), 
+                            pack2D_withidx(gatom_list_p), pack2D_withidx(gbond_list_p), pack1D(nb_list_p), 
+                            get_mask(fatom_list_p))
         if self.predict:
             return res_graph_inputs
         else:

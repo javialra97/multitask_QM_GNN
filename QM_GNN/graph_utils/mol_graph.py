@@ -70,31 +70,114 @@ def bond_features(bond):
         [bt == Chem.rdchem.BondType.SINGLE, bt == Chem.rdchem.BondType.DOUBLE, bt == Chem.rdchem.BondType.TRIPLE,
          bt == Chem.rdchem.BondType.AROMATIC, bond.GetIsConjugated(), bond.IsInRing()], dtype=np.float32)
 
+def get_non_qm_features_p(p_smiles, fatom_index_r):
+    p_mol = Chem.MolFromSmiles(p_smiles)
+    if not p_mol:
+        raise ValueError("Could not parse smiles string:", p_smiles) 
+
+    fatom_index_p = {a.GetIntProp('molAtomMapNumber') - 1: a.GetIdx() for a in p_mol.GetAtoms()}
+    fbond_index = {'{}-{}'.format(*sorted([b.GetBeginAtom().GetIntProp('molAtomMapNumber') - 1,
+                                          b.GetEndAtom().GetIntProp('molAtomMapNumber') - 1])): b.GetIdx()
+                                        for b in p_mol.GetBonds()}
+    
+    n_atoms = p_mol.GetNumAtoms()
+    n_bonds = max(p_mol.GetNumBonds(), 1)
+    fatoms_geo = np.zeros((n_atoms, atom_fdim_geo))
+    fbonds = np.zeros((n_bonds, bond_fdim))
+
+    atom_nb = np.zeros((n_atoms, max_nb), dtype=np.int32)
+    bond_nb = np.zeros((n_atoms, max_nb), dtype=np.int32)
+    num_nbs = np.zeros((n_atoms,), dtype=np.int32)
+
+    for smi in p_smiles.split('.'):
+        mol = Chem.MolFromSmiles(smi)
+        fatom_index_mol = {a.GetIntProp('molAtomMapNumber') - 1: a.GetIdx() for a in mol.GetAtoms()}
+
+        for map_idx in fatom_index_mol:
+            fatoms_geo[fatom_index_r[map_idx], :] = atom_features(p_mol.GetAtomWithIdx(fatom_index_p[map_idx]))
+
+        for bond in mol.GetBonds():
+            a1i, a2i = bond.GetBeginAtom().GetIntProp('molAtomMapNumber'), \
+                       bond.GetEndAtom().GetIntProp('molAtomMapNumber')
+            idx = fbond_index['{}-{}'.format(*sorted([a1i-1, a2i-1]))]
+            a1 = fatom_index_r[a1i-1]
+            a2 = fatom_index_r[a2i-1]
+
+            a1i = fatom_index_mol[a1i-1]
+            a2i = fatom_index_mol[a2i-1]
+
+            if num_nbs[a1] == max_nb or num_nbs[a2] == max_nb:
+                raise Exception(p_smiles)
+            atom_nb[a1, num_nbs[a1]] = a2
+            atom_nb[a2, num_nbs[a2]] = a1
+            bond_nb[a1, num_nbs[a1]] = idx
+            bond_nb[a2, num_nbs[a2]] = idx
+            num_nbs[a1] += 1
+            num_nbs[a2] += 1
+
+            fbonds[idx, :6] = bond_features(bond)
+
+    return fatoms_geo, fbonds, atom_nb, bond_nb, num_nbs   
+
+def get_non_qm_features_r(r_smiles):
+    # indices are different for reactants and products -> use same fatom_index
+    r_mol = Chem.MolFromSmiles(r_smiles)
+    if not r_mol:
+        raise ValueError("Could not parse smiles string:", r_mol)
+
+    fatom_index = {a.GetIntProp('molAtomMapNumber') - 1: a.GetIdx() for a in r_mol.GetAtoms()}
+    fbond_index = {'{}-{}'.format(*sorted([b.GetBeginAtom().GetIntProp('molAtomMapNumber') - 1,
+                                          b.GetEndAtom().GetIntProp('molAtomMapNumber') - 1])): b.GetIdx()
+                                        for b in r_mol.GetBonds()}
+
+    n_atoms = r_mol.GetNumAtoms()
+    n_bonds = max(r_mol.GetNumBonds(), 1)
+    fatoms_geo = np.zeros((n_atoms, atom_fdim_geo))
+    fbonds = np.zeros((n_bonds, bond_fdim))
+
+    atom_nb = np.zeros((n_atoms, max_nb), dtype=np.int32)
+    bond_nb = np.zeros((n_atoms, max_nb), dtype=np.int32)
+    num_nbs = np.zeros((n_atoms,), dtype=np.int32)
+
+    for smi in r_smiles.split('.'):
+        mol = Chem.MolFromSmiles(smi)
+        fatom_index_mol = {a.GetIntProp('molAtomMapNumber') - 1: a.GetIdx() for a in mol.GetAtoms()}
+
+        for map_idx in fatom_index_mol:
+            fatoms_geo[fatom_index[map_idx], :] = atom_features(r_mol.GetAtomWithIdx(fatom_index[map_idx]))
+
+        for bond in mol.GetBonds():
+            a1i, a2i = bond.GetBeginAtom().GetIntProp('molAtomMapNumber'), \
+                       bond.GetEndAtom().GetIntProp('molAtomMapNumber')
+            idx = fbond_index['{}-{}'.format(*sorted([a1i-1, a2i-1]))]
+            a1 = fatom_index[a1i-1]
+            a2 = fatom_index[a2i-1]
+
+            a1i = fatom_index_mol[a1i-1]
+            a2i = fatom_index_mol[a2i-1]
+
+            if num_nbs[a1] == max_nb or num_nbs[a2] == max_nb:
+                raise Exception(r_smiles)
+            atom_nb[a1, num_nbs[a1]] = a2
+            atom_nb[a2, num_nbs[a2]] = a1
+            bond_nb[a1, num_nbs[a1]] = idx
+            bond_nb[a2, num_nbs[a2]] = idx
+            num_nbs[a1] += 1
+            num_nbs[a2] += 1
+
+            fbonds[idx, :6] = bond_features(bond)
+
+    return fatoms_geo, fbonds, atom_nb, bond_nb, num_nbs, fatom_index, fbond_index, n_atoms
 
 def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selected_reaction_descriptors, ps, core=[]):
     atom_fdim_qm = 20 * len(selected_atom_descriptors)
     reaction_fdim_qm = len(selected_reaction_descriptors)
 
-    mol_rs = Chem.MolFromSmiles(rs)
-    if not mol_rs:
-        raise ValueError("Could not parse smiles string:", rs)
+    fatoms_geo, fbonds, atom_nb, bond_nb, num_nbs, fatom_index, fbond_index, n_atoms = get_non_qm_features_r(rs)
+    fatoms_geo_p, fbonds_p, atom_nb_p, bond_nb_p, num_nbs_p = get_non_qm_features_p(ps, fatom_index)
 
-    fatom_index = {a.GetIntProp('molAtomMapNumber') - 1: a.GetIdx() for a in mol_rs.GetAtoms()}
-    fbond_index = {'{}-{}'.format(*sorted([b.GetBeginAtom().GetIntProp('molAtomMapNumber') - 1,
-                                          b.GetEndAtom().GetIntProp('molAtomMapNumber') - 1])): b.GetIdx()
-                   for b in mol_rs.GetBonds()}
-
-    n_atoms = mol_rs.GetNumAtoms()
-    n_bonds = max(mol_rs.GetNumBonds(), 1)
-    fatoms_geo = np.zeros((n_atoms, atom_fdim_geo))
     fatoms_qm = np.zeros((n_atoms, atom_fdim_qm))
-    #fbonds_geo = np.zeros((n_bonds, bond_fdim_geo))
-    fbonds = np.zeros((n_bonds, bond_fdim))
     freaction_qm = np.zeros((reaction_fdim_qm,))
-
-    atom_nb = np.zeros((n_atoms, max_nb), dtype=np.int32)
-    bond_nb = np.zeros((n_atoms, max_nb), dtype=np.int32)
-    num_nbs = np.zeros((n_atoms,), dtype=np.int32)
     core_mask = np.zeros((n_atoms,), dtype=np.int32)
 
     for smiles in rs.split('.'):
@@ -152,7 +235,6 @@ def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selecte
 
         for map_idx in fatom_index_mol:
             if "none" not in selected_atom_descriptors:
-                fatoms_geo[fatom_index[map_idx], :] = atom_features(mol_rs.GetAtomWithIdx(fatom_index[map_idx]))
                 fatoms_qm[fatom_index[map_idx], :] = atom_qm_descriptor[fatom_index_mol[map_idx], :]
             if fatom_index[map_idx] in core:
                 core_mask[fatom_index[map_idx]] = 1
@@ -176,7 +258,6 @@ def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selecte
             num_nbs[a1] += 1
             num_nbs[a2] += 1
 
-            fbonds[idx, :6] = bond_features(bond)
             if 'bond_order' in selected_bond_descriptors:
                 fbonds[idx, :20] = bond_index[a1i, a2i]
             if 'bond_length' in selected_bond_descriptors:
@@ -191,17 +272,17 @@ def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selecte
         for idx, descriptor in enumerate(selected_reaction_descriptors):
             freaction_qm[idx] = reaction_descriptor_series[descriptor]
 
-    return fatoms_geo, fatoms_qm, fbonds, atom_nb, bond_nb, num_nbs, core_mask, freaction_qm
+    return fatoms_geo, fatoms_qm, fbonds, atom_nb, bond_nb, num_nbs, core_mask, freaction_qm, fatoms_geo_p, fbonds_p, atom_nb_p, bond_nb_p, num_nbs_p
 
 
 def smiles2graph_pr(r_smiles, p_smiles, selected_atom_descriptors=['partial_charge', 'fukui_elec', 'fukui_neu', 'nmr'],
                     selected_bond_descriptors=['bond_order', 'bond_length'], selected_reaction_descriptors=['G', 'E_r', 'G_alt1', 'G_alt2'], 
                     core_buffer=0):
     rs_core = _get_reacting_core(r_smiles, p_smiles, core_buffer)
-    rs_features = _mol2graph(r_smiles, selected_atom_descriptors, selected_bond_descriptors, 
+    features = _mol2graph(r_smiles, selected_atom_descriptors, selected_bond_descriptors, 
                             selected_reaction_descriptors, p_smiles, core=rs_core)
 
-    return rs_features, r_smiles
+    return features, r_smiles
 
 
 def _get_reacting_core(rs, p, buffer):
