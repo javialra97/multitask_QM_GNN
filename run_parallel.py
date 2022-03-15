@@ -14,7 +14,7 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
     log_dir = "log_test/{}".format(partition_scheme)
     os.makedirs(cross_val_dir + "/" + partition_scheme, exist_ok=True)
 
-    fixed_command_list = ['python', 'cross_val.py', '-m', 'QM_GNN', '--atom_desc_path', f'descriptors/{atom_desc_file}',
+    fixed_command_list = ['python', 'cross_val.py', '-m', 'QM_GNN', '--data_path', f'datasets/{dataset}', '--atom_desc_path', f'descriptors/{atom_desc_file}',
             '--reaction_desc_path', f'descriptors/{reaction_desc_file}', '--k_fold', '5', '--select_bond_descriptors', 'none']
 
     experiments = [
@@ -46,7 +46,9 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
         ['--model_dir', f'{cross_val_dir}/{partition_scheme}/trad_morfeus_Gs', '--select_atom_descriptors', 'nmr',
             'partial_charge', 'fukui_elec', 'fukui_neu', 'sasa', 'pint', '--select_reaction_descriptors', 'G', 'G_alt1', 'G_alt2'],
         ['--model_dir', f'{cross_val_dir}/{partition_scheme}/all_full_morfeus', '--select_atom_descriptors', 'nmr',
-            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', 'sasa', 'pint']
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', 'sasa', 'pint'],
+       ['--model_dir', f'{cross_val_dir}/{partition_scheme}/react_only', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', '--select_reaction_descriptors', 'G', 'G_alt1', 'G_alt2']
         ]
 
     command_lines = []

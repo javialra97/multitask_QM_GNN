@@ -43,7 +43,9 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
         ['--model_dir', f'{cross_val_dir}/{partition_scheme}/all_hard_morfeus', '--select_atom_descriptors', 'nmr', 'partial_charge', 'sasa', 'pint'],
         ['--model_dir', f'{cross_val_dir}/{partition_scheme}/all_morfeus', '--select_atom_descriptors', 'sasa', 'pint'],
         ['--model_dir', f'{cross_val_dir}/{partition_scheme}/all_full_morfeus', '--select_atom_descriptors', 'nmr',
-            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', 'sasa', 'pint']
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', 'sasa', 'pint'],
+        ['--model_dir', f'{cross_val_dir}/{partition_scheme}/react_only', '--select_atom_descriptors', 'nmr',
+            'partial_charge', 'spin_dens', 'spin_dens_triplet', 'fukui_elec', 'fukui_neu', '--select_reaction_descriptors', 'G', 'G_alt1', 'G_alt2']       
         ]
 
     command_lines = []
@@ -84,6 +86,6 @@ if __name__ == '__main__':
     os.makedirs(cross_val_dir, exist_ok=True)
     os.makedirs("log_test", exist_ok=True)
 
-    run_experiments('100_points', atom_desc_file, reaction_desc_file, sample=str(100))
-    run_experiments('400_points', atom_desc_file, reaction_desc_file, sample=str(400))
+    #run_experiments('100_points', atom_desc_file, reaction_desc_file, sample=str(100))
+    #run_experiments('400_points', atom_desc_file, reaction_desc_file, sample=str(400))
     run_experiments('all_points', atom_desc_file, reaction_desc_file)
