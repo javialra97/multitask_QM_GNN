@@ -9,13 +9,15 @@ np.set_printoptions(threshold=np.inf)
 
 class WLNRegressor(tf.keras.Model):
 
-    def __init__(self, hidden_size, depth, selected_atom_descriptors, selected_reaction_descriptors, max_nb=10):
+    def __init__(self, hidden_size, depth, selected_atom_descriptors, selected_reaction_descriptors, w_atom, w_reaction, max_nb=10):
         super(WLNRegressor, self).__init__()
         self.hidden_size = hidden_size
         self.reactants_WLN = WLN_Layer(hidden_size, depth, max_nb)
         self.products_WLN = WLN_Layer(hidden_size, depth, max_nb)
         self.selected_atom_descriptors = selected_atom_descriptors
         self.selected_reaction_descriptors = selected_reaction_descriptors
+        self.w_atom = tf.Variable(self.w_atom, trainable=False)
+        self.w_reaction = tf.Variable(self.w_reaction, trainable=False)
 
         if "none" in self.selected_atom_descriptors:
             self.reaction_score0 = layers.Dense(hidden_size, activation=K.relu,
@@ -44,9 +46,6 @@ class WLNRegressor(tf.keras.Model):
                                            use_bias=False)
 
         self.reaction_score = layers.Dense(1, kernel_initializer=tf.random_normal_initializer(stddev=0.1))
-
-        self.w_atom = tf.Variable(1.0, trainable=True)
-        self.w_reaction = tf.Variable(3.0, trainable=True)
 
         self.node_reshape = layers.Reshape((-1, 1))
         self.core_reshape = layers.Reshape((-1, 1))

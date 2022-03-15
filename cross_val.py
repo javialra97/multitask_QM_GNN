@@ -112,7 +112,7 @@ for i in range(args.k_fold):
     valid_steps = np.ceil(len(valid_smiles) / args.selec_batch_size).astype(int)
 
     # set up tensorflow model
-    model = regressor(args.feature, args.depth, args.select_atom_descriptors, args.select_reaction_descriptors)
+    model = regressor(args.feature, args.depth, args.select_atom_descriptors, args.select_reaction_descriptors, args.w_atom, args.w_reaction)
     opt = tf.keras.optimizers.Adam(learning_rate=args.ini_lr, clipnorm=5)
     model.compile(
         optimizer=opt,

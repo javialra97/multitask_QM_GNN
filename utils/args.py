@@ -58,6 +58,11 @@ def parse_args(cross_val=False):
                         help='In case of selective sampling, indicates path to the test set csv-file')
     parser.add_argument('--random_state', type=int, default=0,
                         help='Random state to be selected for sampling/shuffling')
+    parser.add_argument('--w_atom', type=float, default=1.0,
+                        help='initialization of the weights of the qm atom-features relative to the learned atom-features')
+    parser.add_argument('--w_reaction', type=float, default=3.0,
+                        help='initialization oof the weights of the qm reaction-features' 
+                        'relative to the sum-pooled atom-feature based representation')
 
     if cross_val:
         parser.add_argument('--k_fold', default=10, type=int,
