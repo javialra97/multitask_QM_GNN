@@ -3,16 +3,19 @@ import os
 cross_val_dir = "cross_val"
 
 train_valid_set_file = "train_valid_set_dipole_split.csv"
+
 test_set_file = "test_set_dipole_split.csv"
 
 atom_desc_file = "atom_desc_cycloadd_wln.pkl"
+
 reaction_desc_file = "reaction_desc_cycloadd_wln.pkl"
 
+log_dir_head = "log_test"
 
 def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample=None):
-    os.makedirs("log_test/{}".format(partition_scheme), exist_ok=True)
-    log_dir = "log_test/{}".format(partition_scheme)
-    os.makedirs(cross_val_dir + "/" + partition_scheme, exist_ok=True)
+    os.makedirs(f'{log_dir_head}/{partition_scheme}', exist_ok=True)
+    log_dir = f'{log_dir_head}/{partition_scheme}'
+    os.makedirs(f'{cross_val_dir}/{partition_scheme}', exist_ok=True)
 
     fixed_command_list = ['python', 'cross_val.py', '-m', 'QM_GNN', '--train_valid_set_path', f'datasets_selective_sampling/{train_valid_set_file}', 
             '--test_set_path', f'datasets_selective_sampling/{test_set_file}', '--atom_desc_path', f'descriptors/{atom_desc_file}',
@@ -84,7 +87,7 @@ def launch_jobs(experiments, log_dir):
 
 if __name__ == '__main__':    
     os.makedirs(cross_val_dir, exist_ok=True)
-    os.makedirs("log_test", exist_ok=True)
+    os.makedirs(log_dir_head, exist_ok=True)
 
     #run_experiments('100_points', atom_desc_file, reaction_desc_file, sample=str(100))
     #run_experiments('400_points', atom_desc_file, reaction_desc_file, sample=str(400))
