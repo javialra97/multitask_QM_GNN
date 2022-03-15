@@ -70,6 +70,7 @@ def bond_features(bond):
         [bt == Chem.rdchem.BondType.SINGLE, bt == Chem.rdchem.BondType.DOUBLE, bt == Chem.rdchem.BondType.TRIPLE,
          bt == Chem.rdchem.BondType.AROMATIC, bond.GetIsConjugated(), bond.IsInRing()], dtype=np.float32)
 
+
 def get_non_qm_features_p(p_smiles, fatom_index_r):
     p_mol = Chem.MolFromSmiles(p_smiles)
     if not p_mol:
@@ -89,38 +90,34 @@ def get_non_qm_features_p(p_smiles, fatom_index_r):
     bond_nb = np.zeros((n_atoms, max_nb), dtype=np.int32)
     num_nbs = np.zeros((n_atoms,), dtype=np.int32)
 
-    for smi in p_smiles.split('.'):
-        mol = Chem.MolFromSmiles(smi)
-        fatom_index_mol = {a.GetIntProp('molAtomMapNumber') - 1: a.GetIdx() for a in mol.GetAtoms()}
+    for map_idx in fatom_index_p:
+        fatoms_geo[fatom_index_r[map_idx], :] = atom_features(p_mol.GetAtomWithIdx(fatom_index_p[map_idx]))
 
-        for map_idx in fatom_index_mol:
-            fatoms_geo[fatom_index_r[map_idx], :] = atom_features(p_mol.GetAtomWithIdx(fatom_index_p[map_idx]))
+    for bond in p_mol.GetBonds():
+        a1i, a2i = bond.GetBeginAtom().GetIntProp('molAtomMapNumber'), \
+                    bond.GetEndAtom().GetIntProp('molAtomMapNumber')
+        idx = fbond_index['{}-{}'.format(*sorted([a1i-1, a2i-1]))]
+        a1 = fatom_index_r[a1i-1]
+        a2 = fatom_index_r[a2i-1]
 
-        for bond in mol.GetBonds():
-            a1i, a2i = bond.GetBeginAtom().GetIntProp('molAtomMapNumber'), \
-                       bond.GetEndAtom().GetIntProp('molAtomMapNumber')
-            idx = fbond_index['{}-{}'.format(*sorted([a1i-1, a2i-1]))]
-            a1 = fatom_index_r[a1i-1]
-            a2 = fatom_index_r[a2i-1]
+        a1i = fatom_index_p[a1i - 1]
+        a2i = fatom_index_p[a2i - 1]
 
-            a1i = fatom_index_mol[a1i-1]
-            a2i = fatom_index_mol[a2i-1]
+        if num_nbs[a1] == max_nb or num_nbs[a2] == max_nb:
+            raise Exception(p_smiles)
+        atom_nb[a1, num_nbs[a1]] = a2
+        atom_nb[a2, num_nbs[a2]] = a1
+        bond_nb[a1, num_nbs[a1]] = idx
+        bond_nb[a2, num_nbs[a2]] = idx
+        num_nbs[a1] += 1
+        num_nbs[a2] += 1
 
-            if num_nbs[a1] == max_nb or num_nbs[a2] == max_nb:
-                raise Exception(p_smiles)
-            atom_nb[a1, num_nbs[a1]] = a2
-            atom_nb[a2, num_nbs[a2]] = a1
-            bond_nb[a1, num_nbs[a1]] = idx
-            bond_nb[a2, num_nbs[a2]] = idx
-            num_nbs[a1] += 1
-            num_nbs[a2] += 1
-
-            fbonds[idx, :6] = bond_features(bond)
+        fbonds[idx, :6] = bond_features(bond)
 
     return fatoms_geo, fbonds, atom_nb, bond_nb, num_nbs   
 
+
 def get_non_qm_features_r(r_smiles):
-    # indices are different for reactants and products -> use same fatom_index
     r_mol = Chem.MolFromSmiles(r_smiles)
     if not r_mol:
         raise ValueError("Could not parse smiles string:", r_mol)
@@ -139,35 +136,29 @@ def get_non_qm_features_r(r_smiles):
     bond_nb = np.zeros((n_atoms, max_nb), dtype=np.int32)
     num_nbs = np.zeros((n_atoms,), dtype=np.int32)
 
-    for smi in r_smiles.split('.'):
-        mol = Chem.MolFromSmiles(smi)
-        fatom_index_mol = {a.GetIntProp('molAtomMapNumber') - 1: a.GetIdx() for a in mol.GetAtoms()}
+    for map_idx in fatom_index:
+        fatoms_geo[fatom_index[map_idx], :] = atom_features(r_mol.GetAtomWithIdx(fatom_index[map_idx]))
 
-        for map_idx in fatom_index_mol:
-            fatoms_geo[fatom_index[map_idx], :] = atom_features(r_mol.GetAtomWithIdx(fatom_index[map_idx]))
+    for bond in r_mol.GetBonds():
+        a1i, a2i = bond.GetBeginAtom().GetIntProp('molAtomMapNumber'), \
+                    bond.GetEndAtom().GetIntProp('molAtomMapNumber')
+        idx = fbond_index['{}-{}'.format(*sorted([a1i-1, a2i-1]))]
+        a1 = fatom_index[a1i-1]
+        a2 = fatom_index[a2i-1]
 
-        for bond in mol.GetBonds():
-            a1i, a2i = bond.GetBeginAtom().GetIntProp('molAtomMapNumber'), \
-                       bond.GetEndAtom().GetIntProp('molAtomMapNumber')
-            idx = fbond_index['{}-{}'.format(*sorted([a1i-1, a2i-1]))]
-            a1 = fatom_index[a1i-1]
-            a2 = fatom_index[a2i-1]
+        if num_nbs[a1] == max_nb or num_nbs[a2] == max_nb:
+            raise Exception(r_smiles)
+        atom_nb[a1, num_nbs[a1]] = a2
+        atom_nb[a2, num_nbs[a2]] = a1
+        bond_nb[a1, num_nbs[a1]] = idx
+        bond_nb[a2, num_nbs[a2]] = idx
+        num_nbs[a1] += 1
+        num_nbs[a2] += 1
 
-            a1i = fatom_index_mol[a1i-1]
-            a2i = fatom_index_mol[a2i-1]
-
-            if num_nbs[a1] == max_nb or num_nbs[a2] == max_nb:
-                raise Exception(r_smiles)
-            atom_nb[a1, num_nbs[a1]] = a2
-            atom_nb[a2, num_nbs[a2]] = a1
-            bond_nb[a1, num_nbs[a1]] = idx
-            bond_nb[a2, num_nbs[a2]] = idx
-            num_nbs[a1] += 1
-            num_nbs[a2] += 1
-
-            fbonds[idx, :6] = bond_features(bond)
+        fbonds[idx, :6] = bond_features(bond)
 
     return fatoms_geo, fbonds, atom_nb, bond_nb, num_nbs, fatom_index, fbond_index, n_atoms
+
 
 def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selected_reaction_descriptors, ps, core=[]):
     atom_fdim_qm = 20 * len(selected_atom_descriptors)
