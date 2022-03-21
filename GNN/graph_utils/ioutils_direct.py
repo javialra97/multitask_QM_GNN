@@ -6,7 +6,6 @@ N_BOND_CLASS = len(BOND_TYPE)
 binary_fdim = 5 + 6
 INVALID_BOND = -1
 
-
 def get_bin_feature(r, max_natoms):
     '''
     This function is used to generate descriptions of atom-atom relationships, including
@@ -50,11 +49,8 @@ def get_bin_feature(r, max_natoms):
             features.append(f)
     return np.vstack(features).reshape((max_natoms,max_natoms,binary_fdim))
 
-
-bo_to_index = {0.0: 0, 1:1, 2:2, 3:3, 1.5:4}
+bo_to_index  = {0.0: 0, 1:1, 2:2, 3:3, 1.5:4}
 nbos = len(bo_to_index)
-
-
 def get_bond_label(r, edits, max_natoms):
     rmol = Chem.MolFromSmiles(r)
     n_atoms = rmol.GetNumAtoms()
@@ -81,7 +77,6 @@ def get_bond_label(r, edits, max_natoms):
                         # TODO: check if this is consistent with how TF does flattening
     return np.array(labels), sp_labels
 
-
 def binary_features_batch(r_list):
     max_natoms = 0
     for r in r_list:
@@ -90,5 +85,5 @@ def binary_features_batch(r_list):
             max_natoms = rmol.GetNumAtoms()
     features = []
     for r in r_list:
-        features.append(get_bin_feature(r, max_natoms))
+        features.append(get_bin_feature(r,max_natoms))
     return np.array(features)

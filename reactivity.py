@@ -5,39 +5,20 @@ from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
 import numpy as np
 import pandas as pd
 
-import pickle
+from GNN.WLN.data_loading import Graph_DataLoader as dataloader
+from GNN.WLN.models import WLNRegressor as regressor
+from GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
+from process_descs import min_max_normalize_atom_descs, reaction_to_reactants, min_max_normalize_reaction_descs
+from process_descs import predict_atom_descs, predict_reaction_descs
 
+import pickle
 from tqdm import tqdm
 from utils import lr_multiply_ratio, parse_args, create_logger, scale_targets
 
-args, dataloader, regressor = parse_args()
+args = parse_args()
 reactivity_data = pd.read_csv(args.data_path, index_col=0)
 
 logger = create_logger(name=args.model_dir)
-
-if args.model == 'ml_QM_GNN':
-    from ml_QM_GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
-    from process_descs import predict_atom_descs, predict_reaction_descs, reaction_to_reactants, \
-                            min_max_normalize_atom_descs, min_max_normalize_reaction_descs
-    qmdf = predict_atom_descs(args, normalize=False)
-    qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
-    logger.info(f'The considered atom-condensed descriptors are: {args.select_atom_descriptors}')
-    logger.info(f'The considered bond descriptors are: {args.select_bond_descriptors}')
-    df_reaction_desc = None
-    #df_reaction_desc = predict_reaction_desc(args, normalize=False)
-    #df_reaction_desc.to_csv(os.path.join(args.model_dir, 'reaction_descriptors'))
-    logger.info(f'The considered reaction descriptors are: {args.select_reaction_descriptors}')
-else:
-    if args.model == 'QM_GNN':
-        from QM_GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
-        from process_descs import min_max_normalize_atom_descs, reaction_to_reactants, min_max_normalize_reaction_descs
-        qmdf = pd.read_pickle(args.atom_desc_path)
-        qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
-        logger.info(f'The considered atom-condensed descriptors are: {args.select_atom_descriptors}')
-        logger.info(f'The considered bond descriptors are: {args.select_bond_descriptors}')
-        df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
-        df_reaction_desc.to_csv(os.path.join(args.model_dir, 'reaction_descriptors'))
-        logger.info(f'The considered reaction descriptors are: {args.select_reaction_descriptors}')
 
 # training of the model
 if not args.predict:
@@ -52,20 +33,26 @@ if not args.predict:
     logger.info(f' \n Size train set: {len(train)} \n Size validation set: {len(valid)} \n Size test set: {len(test)} \n')
 
     # initialize the descriptors
-    if args.model == 'ml_QM_GNN':
-        # Add reaction_descriptors
-        qmdf = predict_atom_descs(args, normalize=False)
-        qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
-    elif args.model == 'QM_GNN':
-        qmdf = pd.read_pickle(args.atom_desc_path)
-        qmdf.to_csv(os.path.join(args.model_dir, 'atom_descriptors.csv'))
-        df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
-
-    if args.model == 'ml_QM_GNN' or args.model == 'QM_GNN':
+    if "none" not in args.select_atom_descriptors or "none" not in args.select_bond_descriptors:
+        if args.qm_pred:
+            logger.info(f"Predicting atom-level descriptors")
+            qmdf = predict_atom_descs(args, normalize=False)
+        else:
+            qmdf = pd.read_pickle(args.atom_desc_path)
+        qmdf.to_csv(os.path.join(args.model_dir, "atom_descriptors.csv"))
         train_reactants = reaction_to_reactants(train['rxn_smiles'].tolist())
         qmdf, atom_scalers = min_max_normalize_atom_descs(qmdf, train_smiles=train_reactants)
         initialize_qm_descriptors(df=qmdf)
         pickle.dump(atom_scalers, open(os.path.join(args.model_dir, 'atom_scalers.pickle'), 'wb'))
+        logger.info(f"The considered atom-level descriptors are: {args.select_atom_descriptors}")
+        logger.info(f"The considered bond descriptors are: {args.select_bond_descriptors}")
+    if "none" not in args.select_reaction_descriptors:
+        if args.qm_pred:
+            raise NotImplementedError
+        else:
+            df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
+        df_reaction_desc.to_csv(os.path.join(args.model_dir, "reaction_descriptors"))
+        logger.info(f"The considered reaction descriptors are: {args.select_reaction_descriptors}")
         df_reaction_desc, reaction_scalers = min_max_normalize_reaction_descs(df_reaction_desc.copy(),
                                                               train_smiles=train['rxn_smiles'].tolist())
         pickle.dump(reaction_scalers, open(os.path.join(args.model_dir, 'reaction_desc_scalers.pickle'), 'wb'))
@@ -114,16 +101,19 @@ else:
     test_product = test[f'{args.rxn_smiles_column}'].str.split('>', expand=True)[2].values
     test_target = test[f'{args.target_column}'].values
 
-    if args.model == 'ml_QM_GNN':
-        # TO DO: Write function to enable prediction of reaction_descs
-        qmdf = predict_atom_descs(args)
-        initialize_qm_descriptors(df=qmdf)
-    if args.model == 'QM_GNN':
-        qmdf = pd.read_pickle(args.atom_desc_path)
+    if "none" not in args.select_atom_descriptors or "none" not in args.select_bond_descriptors:
+        if args.qm_pred:
+            qmdf = predict_atom_descs(args)
+        else:
+            qmdf = pd.read_pickle(args.atom_desc_path)
         atom_scalers = pickle.load(open(os.path.join(args.model_dir, 'atom_scalers.pickle'), 'rb'))
         qmdf, _ = min_max_normalize_atom_descs(qmdf, scalers=atom_scalers)
         initialize_qm_descriptors(df=qmdf)
-        df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
+    if "none" not in args.select_reaction_descriptors:
+        if args.qm_pred:
+            df_reaction_desc = predict_reaction_descs(args)
+        else:
+            df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
         reaction_scalers = pickle.load(open(os.path.join(args.model_dir, 'reaction_desc_scalers.pickle'), 'rb'))
         df_reaction_desc, _ = min_max_normalize_reaction_descs(df_reaction_desc, scalers=reaction_scalers)
         initialize_reaction_descriptors(df=df_reaction_desc)
@@ -143,7 +133,7 @@ else:
 save_name = os.path.join(args.model_dir, 'best_model.hdf5')
 
 # set up the model for evaluation
-model = regressor(args.feature, args.depth, args.select_atom_descriptors, args.select_reaction_descriptors)
+model = regressor(args.feature, args.depth, args.select_atom_descriptors, args.select_reaction_descriptors, args.w_atom, args.w_reaction)
 opt = tf.keras.optimizers.Adam(learning_rate=args.ini_lr, clipnorm=5)
 model.compile(
     optimizer=opt,

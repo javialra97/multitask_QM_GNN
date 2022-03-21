@@ -21,8 +21,6 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
     fixed_command_list = [
         "python",
         "cross_val.py",
-        "-m",
-        "QM_GNN",
         "--train_valid_set_path",
         f"datasets_selective_sampling/{train_valid_set_file}",
         "--test_set_path",

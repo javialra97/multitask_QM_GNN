@@ -12,8 +12,6 @@ def parse_args(cross_val=False):
                         help='restart the training using the saved the checkpoint file')
     parser.add_argument('-p', '--predict', action='store_true',
                         help='predict reactivity for a given .csv file')
-    parser.add_argument('-m', '--model', default='QM_GNN', choices=['ml_QM_GNN', 'QM_GNN', 'GNN'],
-                        help='model can be used')
     parser.add_argument('-o', '--output_dir', default='output',
                         help='Directory saving output files')
     parser.add_argument('-f', '--feature', default=50, type=int,
@@ -22,6 +20,10 @@ def parse_args(cross_val=False):
                         help='Number of steps for GNN')
     parser.add_argument('-w', '--workers', default=10, type=int,
                         help='Number of workers')
+    parser.add_argument('--qm_pred', action='store_true',
+                        help='predict QM descriptors')
+    parser.add_argument('--no_qm', action='store_true',
+                        help='no QM augmentation')
     parser.add_argument('--rxn_smiles_column', default='rxn_smiles', type=str,
                         help='the column in which the rxn_smiles are stored')
     parser.add_argument('--target_column', default='DG_TS',
@@ -72,20 +74,10 @@ def parse_args(cross_val=False):
 
     args = parser.parse_args()
 
-    if args.model == 'ml_QM_GNN':
-        from ml_QM_GNN.WLN.data_loading import Graph_DataLoader
-        from ml_QM_GNN.WLN.models import WLNRegressor
-    else:
-        if args.model == 'QM_GNN':
-            from QM_GNN.WLN.data_loading import Graph_DataLoader
-            from QM_GNN.WLN.models import WLNRegressor
-        elif args.model == 'GNN':
-            from GNN.WLN.data_loading import Graph_DataLoader
-            from GNN.WLN.models import WLNRegressor
-        else:
-            raise NotImplementedError('Model not implemented, only allow ml_QM_GNN, QM_GNN, and GNN')
-
     if not os.path.isdir(args.model_dir):
         os.mkdir(args.model_dir)
 
-    return args, Graph_DataLoader, WLNRegressor
+    if args.no_qm:
+        args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors = ["none"], ["none"], ["none"]
+
+    return args

@@ -37,15 +37,14 @@ class WLN_Layer(tf.keras.layers.Layer):
         super(WLN_Layer, self).build(input_shape)
 
     def call(self, graph_inputs):
-        input_atom, input_bond, atom_graph, bond_graph, num_nbs, node_mask, _, _ = graph_inputs
-        #calculate the initial atom features using only its own features (no neighbors)
+        input_atom, input_bond, atom_graph, bond_graph, num_nbs, node_mask = graph_inputs
         atom_features = self.atom_features(input_atom)
         layers = []
         for i in range(self.depth):
             fatom_nei = tf.gather_nd(atom_features, tf.dtypes.cast(atom_graph,tf.int64)) #(batch, #atoms, max_nb, hidden)
             fbond_nei = tf.gather_nd(input_bond, tf.dtypes.cast(bond_graph, tf.int64)) #(batch, #atoms, max_nb, #bond features)
             fatom_nei.set_shape([None, None, self.max_nb, self.hidden_size])
-            fbond_nei.set_shape([None, None, self.max_nb, 6])
+            fbond_nei.set_shape([None, None, self.max_nb, 40])
             h_nei_atom = self.nei_atom(fatom_nei) #(batch, #atoms, max_nb, hidden)
             h_nei_bond = self.nei_bond(fbond_nei) #(batch, #atoms, max_nb, hidden)
             h_nei = h_nei_atom * h_nei_bond #(batch, #atoms, max_nb, hidden)
