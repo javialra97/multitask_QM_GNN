@@ -8,3 +8,4 @@ utils/__pycache__/
 descriptors/.DS_Store
 test
 QM_GNN/.DS_Store
+GNN/graph_utils/__pycache__/
