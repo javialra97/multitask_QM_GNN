@@ -2,13 +2,13 @@ import os
 
 cross_val_dir = "cross_val"
 
-dataset = "cycloaddition_attempt2.csv"
+dataset = "strained_data.csv"
 
-atom_desc_file = "atom_desc_cycloadd_wln.pkl"
+atom_desc_file = "atom_desc_strained_wln.pkl"
 
-reaction_desc_file = "reaction_desc_cycloadd_wln.pkl"
+reaction_desc_file = "reaction_desc_strained_wln.pkl"
 
-log_dir_head = "log_test"
+log_dir_head = "log_test_strained"
 
 
 def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample=None):
@@ -235,7 +235,17 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
             "--select_atom_descriptors",
             "nmr",
             "partial_charge",
-            "spin_dens",
+            "--select_reaction_descriptors",
+            "G",
+            "G_alt1",
+            "G_alt2",
+        ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/react_only_soft",
+            "--select_atom_descriptors",
+            "fukui_elec",
+            "fukui_neu",
             "--select_reaction_descriptors",
             "G",
             "G_alt1",
@@ -278,7 +288,7 @@ def launch_jobs(experiments, log_dir):
             f.write("#SBATCH --partition=sched_mit_ccoley \n")
             f.write("#SBATCH --mem 32000 \n")
             f.write(
-                f"#SBATCH --output={log_dir}/{experiment[15].split('/')[-1]}.out \n"
+                f"#SBATCH --output={log_dir}/{experiment[13].split('/')[-1]}.out \n"
             )
 
             f.write("source /home/tstuyver/.bashrc \n")
@@ -300,6 +310,7 @@ def main():
 
     run_experiments("100_points", atom_desc_file, reaction_desc_file, sample=str(100))
     run_experiments("400_points", atom_desc_file, reaction_desc_file, sample=str(400))
+    run_experiments("800_points", atom_desc_file, reaction_desc_file, sample=str(800))
     run_experiments("all_points", atom_desc_file, reaction_desc_file)
 
 
