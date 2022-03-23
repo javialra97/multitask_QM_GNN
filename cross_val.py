@@ -29,11 +29,11 @@ if "none" not in args.select_atom_descriptors or "none" not in args.select_bond_
     qmdf.to_csv(os.path.join(args.model_dir, "atom_descriptors.csv"))
     logger.info(f"The considered atom-level descriptors are: {args.select_atom_descriptors}")
     logger.info(f"The considered bond descriptors are: {args.select_bond_descriptors}")
-    if "none" not in args.select_reaction_descriptors:
-        if args.qm_pred:
-            raise NotImplementedError
-        else:
-            df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
+if "none" not in args.select_reaction_descriptors:
+    if args.qm_pred:
+        raise NotImplementedError
+    else:
+        df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
         df_reaction_desc.to_csv(os.path.join(args.model_dir, "reaction_descriptors"))
         logger.info(f"The considered reaction descriptors are: {args.select_reaction_descriptors}")
 
