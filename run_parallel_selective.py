@@ -10,7 +10,7 @@ atom_desc_file = "atom_desc_cycloadd_wln.pkl"
 
 reaction_desc_file = "reaction_desc_cycloadd_wln.pkl"
 
-log_dir_head = "log_test"
+log_dir_head = "log_test_dipole_split"
 
 
 def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample=None):
@@ -177,6 +177,36 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
         ],
         [
             "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/all_Gs",
+            "--select_atom_descriptors",
+            "nmr",
+            "partial_charge",
+            "spin_dens",
+            "spin_dens_triplet",
+            "fukui_elec",
+            "fukui_neu",
+            "--select_reaction_descriptors",
+            "G",
+            "G_alt1",
+            "G_alt2",
+        ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/trad_morfeus_Gs",
+            "--select_atom_descriptors",
+            "nmr",
+            "partial_charge",
+            "fukui_elec",
+            "fukui_neu",
+            "sasa",
+            "pint",
+            "--select_reaction_descriptors",
+            "G",
+            "G_alt1",
+            "G_alt2",
+        ],
+        [
+            "--model_dir",
             f"{cross_val_dir}/{partition_scheme}/all_full_morfeus",
             "--select_atom_descriptors",
             "nmr",
@@ -209,7 +239,17 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
             "--select_atom_descriptors",
             "nmr",
             "partial_charge",
-            "spin_dens",
+            "--select_reaction_descriptors",
+            "G",
+            "G_alt1",
+            "G_alt2",
+        ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/react_only_soft",
+            "--select_atom_descriptors",
+            "fukui_elec",
+            "fukui_neu",
             "--select_reaction_descriptors",
             "G",
             "G_alt1",
@@ -228,6 +268,47 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
             "G_alt1",
             "G_alt2",
         ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/only_promotions",
+            "--select_atom_descriptors",
+            "none",
+            "--select_reaction_descriptors",
+            "G",
+            "G_alt1",
+            "G_alt2",
+        ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/only_promotions_corr",
+            "--select_atom_descriptors",
+            "none",
+            "--select_reaction_descriptors",
+            "G",
+            "G_alt1_corr",
+            "G_alt2_corr",
+        ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/only_promotions_orb",
+            "--select_atom_descriptors",
+            "none",
+            "--select_reaction_descriptors",
+            "G_orb",
+            "G_alt1_orb",
+            "G_alt2_orb",
+        ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/only_orbital_energies",
+            "--select_atom_descriptors",
+            "none",
+            "--select_reaction_descriptors",
+            "homo_1",
+            "lumo_1",
+            "homo_2",
+            "lumo_2"
+        ]
     ]
 
     command_lines = []

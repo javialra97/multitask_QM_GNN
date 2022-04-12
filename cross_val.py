@@ -234,7 +234,7 @@ for i in range(args.k_fold):
             mse += (y_predicted - y_true) ** 2 / int(len(test_smiles))
 
     rmse = np.sqrt(mse)
-    test_predicted = pd.DataFrame({"rxn_id": test_rxn_id, "predicted": predicted})
+    test_predicted = pd.DataFrame({"reaction_id": test_rxn_id, "predicted": predicted})
     test_predicted.to_csv(os.path.join(args.model_dir, f"test_predicted_{i}.csv"))
 
     rmse_list.append(rmse)

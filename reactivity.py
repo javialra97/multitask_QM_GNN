@@ -173,7 +173,7 @@ else:
     predicted = np.concatenate(predicted, axis=0)
     predicted = predicted.reshape(-1)
 
-    test_predicted = pd.DataFrame({'rxn_id': test_rxn_id, 'predicted': predicted})
+    test_predicted = pd.DataFrame({'reaction_id': test_rxn_id, 'predicted': predicted})
     if not os.path.isdir(args.output_dir):
         os.mkdir(args.output_dir)
 

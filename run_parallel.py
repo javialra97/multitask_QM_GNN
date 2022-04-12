@@ -264,6 +264,47 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
             "G_alt1",
             "G_alt2",
         ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/only_promotions",
+            "--select_atom_descriptors",
+            "none",
+            "--select_reaction_descriptors",
+            "G",
+            "G_alt1",
+            "G_alt2",
+        ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/only_promotions_corr",
+            "--select_atom_descriptors",
+            "none",
+            "--select_reaction_descriptors",
+            "G",
+            "G_alt1_corr",
+            "G_alt2_corr",
+        ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/only_promotions_orb",
+            "--select_atom_descriptors",
+            "none",
+            "--select_reaction_descriptors",
+            "G_orb",
+            "G_alt1_orb",
+            "G_alt2_orb",
+        ],
+        [
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/only_orbital_energies",
+            "--select_atom_descriptors",
+            "none",
+            "--select_reaction_descriptors",
+            "homo_1",
+            "lumo_1",
+            "homo_2",
+            "lumo_2"
+        ]
     ]
 
     command_lines = []
@@ -281,11 +322,12 @@ def launch_jobs(experiments, log_dir):
         with open("generic_slurm.sh", "w") as f:
             f.write("#!/bin/bash \n")
             f.write("#SBATCH -N 1 \n")
-            f.write("#SBATCH -n 16 \n")
+            f.write("#SBATCH --cpus-per-task=6 \n")
             f.write("#SBATCH --time=11:59:00 \n")
             f.write("#SBATCH --gres=gpu:1 \n")
             f.write("#SBATCH --constraint=centos7 \n")
             f.write("#SBATCH --partition=sched_mit_ccoley \n")
+            f.write("#SBATCH --nodelist node1237 \n")
             f.write("#SBATCH --mem 32000 \n")
             f.write(
                 f"#SBATCH --output={log_dir}/{experiment[13].split('/')[-1]}.out \n"
