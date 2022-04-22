@@ -51,7 +51,7 @@ if not args.predict:
             raise NotImplementedError
         else:
             df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
-        df_reaction_desc.to_csv(os.path.join(args.model_dir, "reaction_descriptors"))
+        df_reaction_desc.to_csv(os.path.join(args.model_dir, "reaction_descriptors.csv"))
         logger.info(f"The considered reaction descriptors are: {args.select_reaction_descriptors}")
         df_reaction_desc, reaction_scalers = min_max_normalize_reaction_descs(df_reaction_desc.copy(),
                                                               train_smiles=train['rxn_smiles'].tolist())
@@ -92,14 +92,14 @@ if not args.predict:
                            args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors):
         x_build = x
 
-# only testing
+# only prediction
 else:
     # process the testing data 
     test = reactivity_data
     test_rxn_id = test['reaction_id'].values
     test_smiles = test.rxn_smiles.str.split('>', expand=True)[0].values
     test_product = test[f'{args.rxn_smiles_column}'].str.split('>', expand=True)[2].values
-    test_target = test[f'{args.target_column}'].values
+    #test_target = test[f'{args.target_column}'].values
 
     if "none" not in args.select_atom_descriptors or "none" not in args.select_bond_descriptors:
         if args.qm_pred:
@@ -121,12 +121,12 @@ else:
     target_scaler = pickle.load(open(os.path.join(args.model_dir, 'target_scaler.pickle'), 'rb'))
 
     # set up dataloader for test set
-    test_gen = dataloader(test_smiles, test_product, test_rxn_id, test_target, args.selec_batch_size,
+    test_gen = dataloader(test_smiles, test_product, test_rxn_id, None, args.selec_batch_size,
                           args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors, predict=True)
-    test_steps = np.ceil(len(test_smiles) / args.selec_batch_size).astype(int)
+    test_steps = np.ceil(len(test_smiles)/ args.selec_batch_size).astype(int)
 
     # need an input to initialize the graph network
-    for x in dataloader([test_smiles[0]], [test_product[0]], [test_rxn_id[0]], [test_target[0]], 1,
+    for x in dataloader([test_smiles[0]], [test_product[0]], [test_rxn_id[0]], None, 1,
                         args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors, predict=True):
         x_build = x
 
@@ -167,11 +167,12 @@ else:
     predicted = []
     for x in tqdm(test_gen, total=int(len(test_smiles) / args.selec_batch_size)):
         out = model.predict_on_batch(x)
-        y_predicted = target_scaler.inverse_transform([[out]])[0][0]
+        print(out)
+        y_predicted = target_scaler.inverse_transform(out)
         predicted.append(y_predicted)
 
     predicted = np.concatenate(predicted, axis=0)
-    predicted = predicted.reshape(-1)
+    predicted = np.array(predicted).reshape(-1)
 
     test_predicted = pd.DataFrame({'reaction_id': test_rxn_id, 'predicted': predicted})
     if not os.path.isdir(args.output_dir):

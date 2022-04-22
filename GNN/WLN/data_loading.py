@@ -33,13 +33,13 @@ class Graph_DataLoader(Sequence):
         smiles_tmp = self.smiles[index * self.batch_size:(index + 1) * self.batch_size]
         product_tmp = self.product[index * self.batch_size:(index + 1) * self.batch_size]
         rxn_id_tmp = self.rxn_id[index * self.batch_size:(index + 1) * self.batch_size]
-        target_tmp = self.target[index * self.batch_size:(index + 1) * self.batch_size]
 
         if not self.predict:
+            target_tmp = self.target[index * self.batch_size:(index + 1) * self.batch_size]
             x, y = self.__data_generation(smiles_tmp, product_tmp, rxn_id_tmp, target_tmp)
             return x, y
         else:
-            x = self.__data_generation(smiles_tmp, product_tmp, rxn_id_tmp, target_tmp)
+            x = self.__data_generation(smiles_tmp, product_tmp, rxn_id_tmp)
             return x
 
     def on_epoch_end(self):
@@ -48,16 +48,22 @@ class Graph_DataLoader(Sequence):
             shuffle(zipped)
             self.smiles, self.product, self.rxn_id, self.target = zip(*zipped)
 
-    def __data_generation(self, smiles_tmp, product_tmp, rxn_id_tmp, target_tmp):
+    def __data_generation(self, smiles_tmp, product_tmp, rxn_id_tmp, target_tmp=None):
         prs_extend = []
-        target_extend = []
         rxn_id_extend = []
 
-        for r, p, rxn_id, target in zip(smiles_tmp, product_tmp, rxn_id_tmp, target_tmp):
-            rxn_id_extend.extend([rxn_id])
-            prs_extend.extend([smiles2graph_pr(r, p, self.selected_atom_descriptors, self.selected_bond_descriptors, 
+        if not self.predict:
+            target_extend = []
+            for r, p, rxn_id, target in zip(smiles_tmp, product_tmp, rxn_id_tmp, target_tmp):
+                rxn_id_extend.extend([rxn_id])
+                prs_extend.extend([smiles2graph_pr(r, p, self.selected_atom_descriptors, self.selected_bond_descriptors, 
                             self.selected_reaction_descriptors)])
-            target_extend.extend([target])
+                target_extend.extend([target])
+        else:
+            for r, p, rxn_id in zip(smiles_tmp, product_tmp, rxn_id_tmp):
+                rxn_id_extend.extend([rxn_id])
+                prs_extend.extend([smiles2graph_pr(r, p, self.selected_atom_descriptors, self.selected_bond_descriptors, 
+                            self.selected_reaction_descriptors)])
 
         prs_extends, smiles_extend = zip(*prs_extend)
 
