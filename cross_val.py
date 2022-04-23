@@ -101,6 +101,7 @@ for i in range(args.k_fold):
     # scale target values based on target distribution in the training set
     activation_energy_scaler = scale_targets(train_activation_energy.copy())
     reaction_energy_scaler = scale_targets(train_reaction_energy.copy())
+
     train_activation_energy_scaled = (
         train[f"{args.target_column1}"]
         .apply(lambda x: activation_energy_scaler.transform([[x]])[0][0])
@@ -122,6 +123,7 @@ for i in range(args.k_fold):
     )
     valid_activation_energy = valid[f"{args.target_column1}"].values
     valid_reaction_energy = valid[f"{args.target_column2}"].values
+
     valid_activation_energy_scaled = (
         valid[f"{args.target_column1}"]
         .apply(lambda x: activation_energy_scaler.transform([[x]])[0][0])
@@ -246,10 +248,11 @@ for i in range(args.k_fold):
     mse_reaction_energy = 0
     mae_activation_energy = 0
     mae_reaction_energy = 0
+    
     for x, y in tqdm(test_gen, total=int(len(test_smiles) / args.selec_batch_size)):
         out = model.predict_on_batch(x)
-        activation_energy_out = np.reshape(out['activation_energy'], [-1])
-        reaction_energy_out = np.reshape(out['reaction_energy'], [-1])
+        # activation_energy_out = np.reshape(out['activation_energy'], [-1])
+        # reaction_energy_out = np.reshape(out['reaction_energy'], [-1])
         for y_output, y_true in zip(out['activation_energy'], y['activation_energy']):
             activation_energy_predicted = activation_energy_scaler.inverse_transform([[y_output]])[0][0]
             activation_energies_predicted.append(activation_energy_predicted)
