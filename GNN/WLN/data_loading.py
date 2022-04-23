@@ -8,12 +8,14 @@ from ..graph_utils.ioutils_direct import binary_features_batch
 
 
 class Graph_DataLoader(Sequence):
-    def __init__(self, smiles, product, rxn_id, target, batch_size, selected_atom_descriptors, selected_bond_descriptors, 
-                selected_reaction_descriptors, shuffle=True, predict=False):
+    def __init__(self, smiles, product, rxn_id, activation_energy, reaction_energy, batch_size, 
+                selected_atom_descriptors, selected_bond_descriptors, selected_reaction_descriptors, 
+                shuffle=True, predict=False):
         self.smiles = smiles
         self.product = product
         self.rxn_id = rxn_id
-        self.target = target
+        self.activation_energy = activation_energy
+        self.reaction_energy = reaction_energy
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.predict = predict
@@ -35,8 +37,9 @@ class Graph_DataLoader(Sequence):
         rxn_id_tmp = self.rxn_id[index * self.batch_size:(index + 1) * self.batch_size]
 
         if not self.predict:
-            target_tmp = self.target[index * self.batch_size:(index + 1) * self.batch_size]
-            x, y = self.__data_generation(smiles_tmp, product_tmp, rxn_id_tmp, target_tmp)
+            activation_energy_tmp = self.activation_energy[index * self.batch_size:(index + 1) * self.batch_size]
+            reaction_energy_tmp = self.reaction_energy[index * self.batch_size:(index + 1) * self.batch_size]
+            x, y = self.__data_generation(smiles_tmp, product_tmp, rxn_id_tmp, activation_energy_tmp, reaction_energy_tmp)
             return x, y
         else:
             x = self.__data_generation(smiles_tmp, product_tmp, rxn_id_tmp)
@@ -44,21 +47,23 @@ class Graph_DataLoader(Sequence):
 
     def on_epoch_end(self):
         if self.shuffle == True:
-            zipped = list(zip(self.smiles, self.product, self.rxn_id, self.target))
+            zipped = list(zip(self.smiles, self.product, self.rxn_id, self.activation_energy, self.reaction_energy))
             shuffle(zipped)
-            self.smiles, self.product, self.rxn_id, self.target = zip(*zipped)
+            self.smiles, self.product, self.rxn_id, self.activation_energy, self.reaction_energy = zip(*zipped)
 
-    def __data_generation(self, smiles_tmp, product_tmp, rxn_id_tmp, target_tmp=None):
+    def __data_generation(self, smiles_tmp, product_tmp, rxn_id_tmp, activation_energy_tmp=None, reaction_energy_tmp=None):
         prs_extend = []
         rxn_id_extend = []
 
         if not self.predict:
-            target_extend = []
-            for r, p, rxn_id, target in zip(smiles_tmp, product_tmp, rxn_id_tmp, target_tmp):
+            activation_energy_extend = []
+            reaction_energy_extend = []
+            for r, p, rxn_id, activation_energy, reaction_energy in zip(smiles_tmp, product_tmp, rxn_id_tmp, activation_energy_tmp, reaction_energy_tmp):
                 rxn_id_extend.extend([rxn_id])
                 prs_extend.extend([smiles2graph_pr(r, p, self.selected_atom_descriptors, self.selected_bond_descriptors, 
                             self.selected_reaction_descriptors)])
-                target_extend.extend([target])
+                activation_energy_extend.extend([activation_energy])
+                reaction_energy_extend.extend([reaction_energy])
         else:
             for r, p, rxn_id in zip(smiles_tmp, product_tmp, rxn_id_tmp):
                 rxn_id_extend.extend([rxn_id])
@@ -79,4 +84,5 @@ class Graph_DataLoader(Sequence):
         if self.predict:
             return res_graph_inputs
         else:
-            return res_graph_inputs, np.array(target_extend).astype('float')
+            return res_graph_inputs, {'activation_energy': np.array(activation_energy_extend).astype('float'), 
+                'reaction_energy': np.array(reaction_energy_extend).astype('float')}

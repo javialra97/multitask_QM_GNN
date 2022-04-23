@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras import layers
+from tensorflow.keras import layers, Input, Model
 import tensorflow.keras.backend as K
 from .layers import WLN_Layer, Global_Attention
 import numpy as np
@@ -31,21 +31,34 @@ class WLNRegressor(tf.keras.Model):
             self.attention = Global_Attention(hidden_size + len(self.selected_atom_descriptors) * 20)
 
         if "none" in self.selected_reaction_descriptors:
-            self.mol_layer1 = layers.Dense(hidden_size, activation=K.relu,
+            self.mol_layer1_act = layers.Dense(hidden_size, activation=K.relu,
                                             kernel_initializer=tf.random_normal_initializer(stddev=0.1),
                                             use_bias=False)
-            self.mol_layer2 = layers.Dense(hidden_size, activation=K.relu,
+            self.mol_layer2_act = layers.Dense(hidden_size, activation=K.relu,
+                                            kernel_initializer=tf.random_normal_initializer(stddev=0.1),
+                                            use_bias=False)
+            self.mol_layer1_react = layers.Dense(hidden_size, activation=K.relu,
+                                            kernel_initializer=tf.random_normal_initializer(stddev=0.1),
+                                            use_bias=False)
+            self.mol_layer2_react = layers.Dense(hidden_size, activation=K.relu,
                                             kernel_initializer=tf.random_normal_initializer(stddev=0.1),
                                             use_bias=False)
         else:
-            self.mol_layer1 = layers.Dense(hidden_size + len(self.selected_reaction_descriptors), activation=K.relu,
+            self.mol_layer1_act = layers.Dense(hidden_size + len(self.selected_reaction_descriptors), activation=K.relu,
                                             kernel_initializer=tf.random_normal_initializer(stddev=0.1),
                                             use_bias=False)
-            self.mol_layer2 = layers.Dense(hidden_size + len(self.selected_reaction_descriptors), activation=K.relu,
+            self.mol_layer2_act = layers.Dense(hidden_size + len(self.selected_reaction_descriptors), activation=K.relu,
+                                           kernel_initializer=tf.random_normal_initializer(stddev=0.1),
+                                           use_bias=False)
+            self.mol_layer1_react = layers.Dense(hidden_size + len(self.selected_reaction_descriptors), activation=K.relu,
+                                            kernel_initializer=tf.random_normal_initializer(stddev=0.1),
+                                            use_bias=False)
+            self.mol_layer2_react = layers.Dense(hidden_size + len(self.selected_reaction_descriptors), activation=K.relu,
                                            kernel_initializer=tf.random_normal_initializer(stddev=0.1),
                                            use_bias=False)
 
-        self.reaction_score = layers.Dense(1, kernel_initializer=tf.random_normal_initializer(stddev=0.1))
+        self.reaction_score_act = layers.Dense(1, kernel_initializer=tf.random_normal_initializer(stddev=0.1), name='activation_energy')
+        self.reaction_score_react = layers.Dense(1, kernel_initializer=tf.random_normal_initializer(stddev=0.1), name='reaction_energy')
 
         self.node_reshape = layers.Reshape((-1, 1))
         self.core_reshape = layers.Reshape((-1, 1))
@@ -63,6 +76,7 @@ class WLNRegressor(tf.keras.Model):
         res_atom_hidden_r = self.reactants_WLN(res_inputs[:6])
         res_atom_hidden_p = self.products_WLN(res_inputs_p)
         res_atom_hidden = res_atom_hidden_r - res_atom_hidden_p
+        
         if "none" not in self.selected_atom_descriptors:
             res_atom_hidden = K.concatenate([res_atom_hidden, self.w_atom * fatom_qm], axis=-1)
         res_atom_mask = self.node_reshape(res_atom_mask)
@@ -73,8 +87,13 @@ class WLNRegressor(tf.keras.Model):
         res_mol_hidden = K.sum(res_atom_hidden * res_atom_mask * res_core_mask, axis=-2)
         if "none" not in self.selected_reaction_descriptors:
             res_mol_hidden = K.concatenate([res_mol_hidden, self.w_reaction * freaction_qm], axis=-1)
-        res_mol_hidden = self.mol_layer1(res_mol_hidden)
-        res_mol_hidden = self.mol_layer2(res_mol_hidden)
-        reaction_score = self.reaction_score(res_mol_hidden)
+        
+        res_mol_hidden_act = self.mol_layer1_act(res_mol_hidden)
+        res_mol_hidden_act = self.mol_layer2_act(res_mol_hidden_act)
+        activation_energy = self.reaction_score_act(res_mol_hidden_act)
+        
+        res_mol_hidden_react = self.mol_layer1_react(res_mol_hidden)
+        res_mol_hidden_react = self.mol_layer2_react(res_mol_hidden_react)
+        reaction_energy = self.reaction_score_react(res_mol_hidden_react)
 
-        return reaction_score
+        return {'activation_energy': activation_energy, 'reaction_energy': reaction_energy}

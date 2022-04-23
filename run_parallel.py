@@ -1,14 +1,16 @@
 import os
 
+name = "strained"
+
 cross_val_dir = "cross_val"
 
-dataset = "strained_data.csv"
+dataset = f"{name}_data.csv"
 
-atom_desc_file = "atom_desc_strained_wln.pkl"
+atom_desc_file = f"atom_desc_{name}_wln.pkl"
 
-reaction_desc_file = "reaction_desc_strained_wln.pkl"
+reaction_desc_file = f"reaction_desc_{name}_wln.pkl"
 
-log_dir_head = "log_test_strained"
+log_dir_head = f"log_test_{name}"
 
 
 def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample=None):

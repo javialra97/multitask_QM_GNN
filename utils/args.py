@@ -26,8 +26,10 @@ def parse_args(cross_val=False):
                         help='no QM augmentation')
     parser.add_argument('--rxn_smiles_column', default='rxn_smiles', type=str,
                         help='the column in which the rxn_smiles are stored')
-    parser.add_argument('--target_column', default='DG_TS',
-                        help='the column in which the target values are stored')
+    parser.add_argument('--target_column1', default='DG_TS',
+                        help='the column in which the activation energies are stored')
+    parser.add_argument('--target_column2', default='G_r',
+                        help='the column in which the reaction energies are stored')
     parser.add_argument('--model_dir', default='trained_model',
                         help='path to the checkpoint file of the trained model')
     parser.add_argument('--atom_desc_path', default=None,

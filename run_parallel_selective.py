@@ -1,16 +1,18 @@
 import os
 
+name = "dipole_split"
+
 cross_val_dir = "cross_val"
 
-train_valid_set_file = "train_valid_set_dipole_split.csv"
+train_valid_set_file = f"train_valid_set_{name}.csv"
 
-test_set_file = "test_set_dipole_split.csv"
+test_set_file = f"test_set_{name}.csv"
 
 atom_desc_file = "atom_desc_cycloadd_wln.pkl"
 
 reaction_desc_file = "reaction_desc_cycloadd_wln.pkl"
 
-log_dir_head = "log_test_dipole_split"
+log_dir_head = f"log_test_{name}"
 
 
 def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample=None):
