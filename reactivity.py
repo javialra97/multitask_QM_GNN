@@ -62,34 +62,66 @@ if not args.predict:
     train_rxn_id = train['reaction_id'].values
     train_smiles = train.rxn_smiles.str.split('>', expand=True)[0].values
     train_product = train[f'{args.rxn_smiles_column}'].str.split('>', expand=True)[2].values
-    train_target = train[f'{args.target_column}'].values
+    train_activation_energy = train[f"{args.target_column1}"].values
+    train_reaction_energy = train[f"{args.target_column2}"].values
 
     # scale target values based on target distribution in the training set
-    target_scaler = scale_targets(train_target.copy())
-    pickle.dump(target_scaler, open(os.path.join(args.model_dir, 'target_scaler.pickle'), 'wb'))
+    activation_energy_scaler = scale_targets(train_activation_energy.copy())
+    reaction_energy_scaler = scale_targets(train_reaction_energy.copy())
 
-    train_target_scaled = train[f'{args.target_column}'].apply(lambda x: target_scaler.transform([[x]])[0][0]).values
+    train_activation_energy_scaled = (
+        train[f"{args.target_column1}"]
+        .apply(lambda x: activation_energy_scaler.transform([[x]])[0][0])
+        .values
+    )
+    train_reaction_energy_scaled = (
+        train[f"{args.target_column2}"]
+        .apply(lambda x: reaction_energy_scaler.transform([[x]])[0][0])
+        .values
+    ) 
+    pickle.dump(activation_energy_scaler, open(os.path.join(args.model_dir, 'activation_energy_scaler.pickle'), 'wb'))
+    pickle.dump(reaction_energy_scaler, open(os.path.join(args.model_dir, 'reaction_energy_scaler.pickle'), 'wb'))
+
+    train_activation_energy_scaled = (
+        train[f"{args.target_column1}"]
+        .apply(lambda x: activation_energy_scaler.transform([[x]])[0][0])
+        .values
+    )
+    train_reaction_energy_scaled = (
+        train[f"{args.target_column2}"]
+        .apply(lambda x: reaction_energy_scaler.transform([[x]])[0][0])
+        .values
+    ) 
 
     # process the validation data
     valid_rxn_id = valid['reaction_id'].values
     valid_smiles = valid.rxn_smiles.str.split('>', expand=True)[0].values
     valid_product = valid[f'{args.rxn_smiles_column}'].str.split('>', expand=True)[2].values
-    valid_target = valid[f'{args.target_column}'].values
+    valid_activation_energy = valid[f"{args.target_column1}"].values
+    valid_reaction_energy = valid[f"{args.target_column2}"].values
 
-    valid_target_scaled = valid[f'{args.target_column}'].apply(
-        lambda x: target_scaler.transform([[x]])[0][0]).values
+    valid_activation_energy_scaled = (
+        valid[f"{args.target_column1}"]
+        .apply(lambda x: activation_energy_scaler.transform([[x]])[0][0])
+        .values
+    )
+    valid_reaction_energy_scaled = (
+        valid[f"{args.target_column2}"]
+        .apply(lambda x: reaction_energy_scaler.transform([[x]])[0][0])
+        .values
+    )
 
    # set up dataloaders for training and validation sets
-    train_gen = dataloader(train_smiles, train_product, train_rxn_id, train_target_scaled, args.selec_batch_size,
-                           args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors)
+    train_gen = dataloader(train_smiles, train_product, train_rxn_id, train_activation_energy_scaled, train_reaction_energy_scaled, 
+                            args.selec_batch_size, args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors)
     train_steps = np.ceil(len(train_smiles) / args.selec_batch_size).astype(int)
 
-    valid_gen = dataloader(valid_smiles, valid_product, valid_rxn_id, valid_target_scaled, args.selec_batch_size,
-                           args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors)
+    valid_gen = dataloader(valid_smiles, valid_product, valid_rxn_id, valid_activation_energy_scaled, valid_reaction_energy_scaled, 
+                            args.selec_batch_size, args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors)
     valid_steps = np.ceil(len(valid_smiles) / args.selec_batch_size).astype(int)
 
-    for x, _ in dataloader([train_smiles[0]], [train_product[0]], [train_rxn_id[0]], [train_target_scaled[0]], 1,
-                           args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors):
+    for x, _ in dataloader([train_smiles[0]], [train_product[0]], [train_rxn_id[0]], [train_activation_energy_scaled[0]], [train_reaction_energy_scaled[0]],
+                             1, args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors):
         x_build = x
 
 # only prediction
@@ -99,7 +131,6 @@ else:
     test_rxn_id = test['reaction_id'].values
     test_smiles = test.rxn_smiles.str.split('>', expand=True)[0].values
     test_product = test[f'{args.rxn_smiles_column}'].str.split('>', expand=True)[2].values
-    #test_target = test[f'{args.target_column}'].values
 
     if "none" not in args.select_atom_descriptors or "none" not in args.select_bond_descriptors:
         if args.qm_pred:
@@ -118,22 +149,24 @@ else:
         df_reaction_desc, _ = min_max_normalize_reaction_descs(df_reaction_desc, scalers=reaction_scalers)
         initialize_reaction_descriptors(df=df_reaction_desc)
 
-    target_scaler = pickle.load(open(os.path.join(args.model_dir, 'target_scaler.pickle'), 'rb'))
+    activation_energy_scaler = pickle.load(open(os.path.join(args.model_dir, 'activation_energy_scaler.pickle'), 'rb'))
+    reaction_energy_scaler = pickle.load(open(os.path.join(args.model_dir, 'reaction_energy_scaler.pickle'), 'rb'))
 
     # set up dataloader for test set
-    test_gen = dataloader(test_smiles, test_product, test_rxn_id, None, args.selec_batch_size,
+    test_gen = dataloader(test_smiles, test_product, test_rxn_id, None, None, args.selec_batch_size,
                           args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors, predict=True)
     test_steps = np.ceil(len(test_smiles)/ args.selec_batch_size).astype(int)
 
     # need an input to initialize the graph network
-    for x in dataloader([test_smiles[0]], [test_product[0]], [test_rxn_id[0]], None, 1,
+    for x in dataloader([test_smiles[0]], [test_product[0]], [test_rxn_id[0]], None, None, 1,
                         args.select_atom_descriptors, args.select_bond_descriptors, args.select_reaction_descriptors, predict=True):
         x_build = x
 
 save_name = os.path.join(args.model_dir, 'best_model.hdf5')
 
 # set up the model for evaluation
-model = regressor(args.feature, args.depth, args.select_atom_descriptors, args.select_reaction_descriptors, args.w_atom, args.w_reaction)
+model = regressor(args.feature, args.depth, args.select_atom_descriptors, args.select_reaction_descriptors, 
+                    args.w_atom, args.w_reaction, args.depth_mol_ffn, args.hidden_size_multiplier)
 opt = tf.keras.optimizers.Adam(learning_rate=args.ini_lr, clipnorm=5)
 model.compile(
     optimizer=opt,
@@ -164,17 +197,23 @@ if not args.predict:
     )
 else:
     # evaluate predictions
-    predicted = []
+    activation_energies_predicted = []
+    reaction_energies_predicted = []
     for x in tqdm(test_gen, total=int(len(test_smiles) / args.selec_batch_size)):
         out = model.predict_on_batch(x)
-        print(out)
-        y_predicted = target_scaler.inverse_transform(out)
-        predicted.append(y_predicted)
+        activation_energy_predicted = activation_energy_scaler.inverse_transform(out['activation_energy'])
+        reaction_energy_predicted = reaction_energy_scaler.inverse_transform(out['reaction_energy'])
+        activation_energies_predicted.append(activation_energy_predicted)
+        reaction_energies_predicted.append(reaction_energy_predicted)
 
-    predicted = np.concatenate(predicted, axis=0)
-    predicted = np.array(predicted).reshape(-1)
 
-    test_predicted = pd.DataFrame({'reaction_id': test_rxn_id, 'predicted': predicted})
+    activation_energies_predicted = np.concatenate(activation_energies_predicted, axis=0)
+    reaction_energies_predicted = np.concatenate(reaction_energies_predicted, axis=0)
+    activation_energies_predicted = np.array(activation_energies_predicted).reshape(-1)
+    reaction_energies_predicted = np.array(reaction_energies_predicted).reshape(-1)
+
+    test_predicted = pd.DataFrame({'reaction_id': test_rxn_id, 'predicted_activation_energy': activation_energies_predicted,
+                                    'predicted_reaction_energy': reaction_energies_predicted})
     if not os.path.isdir(args.output_dir):
         os.mkdir(args.output_dir)
 

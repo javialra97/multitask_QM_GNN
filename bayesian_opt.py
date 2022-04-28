@@ -151,7 +151,10 @@ def objective(args0, df_reactions, rxn_smiles_column, target_column1, target_col
             select_reaction_descriptors,
             args.w_atom,
             args.w_reaction,
+            int(args.depth_mol_ffn),
+            int(args.hidden_size_multiplier)
         )
+
         opt = tf.keras.optimizers.Adam(learning_rate=args.ini_lr, clipnorm=5)
         model.compile(
             optimizer=opt,
@@ -195,13 +198,15 @@ def objective(args0, df_reactions, rxn_smiles_column, target_column1, target_col
         for x, y in tqdm(valid_gen, total=int(len(valid_smiles) / selec_batch_size)):
             out = model.predict_on_batch(x)
             for y_output, y_true in zip(out['activation_energy'], y['activation_energy']):
-                activation_energy_predicted = activation_energy_scaler.inverse_transform([[y_output]])[0][0]
+                activation_energy_predicted = activation_energy_scaler.inverse_transform([y_output])[0][0]
+                y_true_unscaled = activation_energy_scaler.inverse_transform([[y_true]])[0][0]
                 activation_energies_predicted.append(activation_energy_predicted)
-                mse_activation_energy += (activation_energy_predicted - y_true) ** 2 / int(len(valid_smiles))
+                mse_activation_energy += (activation_energy_predicted - y_true_unscaled) ** 2 / int(len(valid_smiles))
             for y_output, y_true in zip(out['reaction_energy'], y['reaction_energy']):
-                reaction_energy_predicted = reaction_energy_scaler.inverse_transform([[y_output]])[0][0]
+                reaction_energy_predicted = reaction_energy_scaler.inverse_transform([y_output])[0][0]
+                y_true_unscaled = reaction_energy_scaler.inverse_transform([[y_true]])[0][0]
                 reaction_energies_predicted.append(reaction_energy_predicted)
-                mse_reaction_energy += (reaction_energy_predicted - y_true) ** 2 / int(len(valid_smiles))
+                mse_reaction_energy += (reaction_energy_predicted - y_true_unscaled) ** 2 / int(len(valid_smiles))
 
         rmse_reaction_energy = np.sqrt(mse_reaction_energy)
         rmse_activation_energy = np.sqrt(mse_activation_energy)
@@ -211,6 +216,7 @@ def objective(args0, df_reactions, rxn_smiles_column, target_column1, target_col
 
     logger.info(f"Selected Hyperparameters: {args0}")
     logger.info(f"RMSE amounts to - activation energy: {np.mean(np.array(rmse_activation_energy_list))} - reaction energy: {np.mean(np.array(rmse_reaction_energy_list))} \n")
+    
     return np.mean(np.array(rmse_activation_energy_list))
 
 
@@ -227,26 +233,33 @@ def gnn_bayesian(data_path, random_state, model_dir, qm_pred, atom_desc_path,
             qmdf = predict_atom_descs(None, normalize=False)
         else:
             qmdf = pd.read_pickle(atom_desc_path)
+
+    else:
+        qmdf = None
     if "none" not in select_reaction_descriptors:
         if qm_pred:
             raise NotImplementedError
         else:
             df_reaction_desc = pd.read_pickle(reaction_desc_path)
+    else:
+        df_reaction_desc = None
 
     space = {
         'depth': hp.quniform('depth', low=2, high=6, q=1),
         'w_atom': hp.quniform('w_atom', low=1, high=7, q=0.5),
         'w_reaction': hp.quniform('w_reaction', low=1, high=7, q=0.5),
-        'ini_lr': hp.loguniform('ini_lr', low=0.0001, high=0.01),
-        'lr_ratio': hp.quniform('lr_ratio', low=0.9, high=0.99, q=0.01)
+        'ini_lr': hp.loguniform('ini_lr', low=-10, high=-5),
+        'lr_ratio': hp.quniform('lr_ratio', low=0.9, high=0.99, q=0.01),
+        'depth_mol_ffn': hp.quniform('depth_mol_ffn', low=1, high=4, q=1),
+        'hidden_size_multiplier': hp.quniform('hidden_size_multiplier', low=0, high=20, q=10)
     }
 
     fmin_objective = partial(objective, df_reactions=df,  rxn_smiles_column='rxn_smiles', target_column1='DG_TS', target_column2='G_r',
                         model_dir=model_dir, qmdf=qmdf, df_reaction_desc=df_reaction_desc, select_atom_descriptors=select_atom_descriptors, 
                         select_bond_descriptors=select_bond_descriptors, select_reaction_descriptors=select_reaction_descriptors, logger=logger,
-                        k_fold=4, selec_batch_size=20)    
+                        k_fold=4, selec_batch_size=10)    
 
-    best = fmin(fmin_objective, space, algo=tpe.suggest, max_evals=32)
+    best = fmin(fmin_objective, space, algo=tpe.suggest, max_evals=64)
     logger.info(best)
 
 

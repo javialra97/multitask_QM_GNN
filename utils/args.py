@@ -65,8 +65,10 @@ def parse_args(cross_val=False):
     parser.add_argument('--w_atom', type=float, default=1.0,
                         help='initialization of the weights of the qm atom-features relative to the learned atom-features')
     parser.add_argument('--w_reaction', type=float, default=3.0,
-                        help='initialization oof the weights of the qm reaction-features' 
+                        help='initialization of the weights of the qm reaction-features' 
                         'relative to the sum-pooled atom-feature based representation')
+    parser.add_argument('--depth_mol_ffn', type=int, default=2, help='depth of the molecular-level feedforward network')
+    parser.add_argument('--hidden_size_multiplier', type=int, default=20, help='multiplication factor for the hidden size in the molecular-level layers')
 
     if cross_val:
         parser.add_argument('--k_fold', default=10, type=int,

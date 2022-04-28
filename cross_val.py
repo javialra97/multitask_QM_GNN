@@ -3,7 +3,6 @@ import pickle
 
 from GNN.WLN.data_loading import Graph_DataLoader as dataloader
 from GNN.WLN.models import WLNRegressor as regressor
-#from GNN.WLN.models import build_regressor
 from process_descs import predict_atom_descs, predict_reaction_descs
 from process_descs import min_max_normalize_atom_descs, reaction_to_reactants, min_max_normalize_reaction_descs
 from GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
@@ -16,6 +15,7 @@ import math
 
 from tqdm import tqdm
 from utils import lr_multiply_ratio, parse_args, create_logger, scale_targets
+
 
 args = parse_args(cross_val=True)
 
@@ -180,6 +180,8 @@ for i in range(args.k_fold):
         args.select_reaction_descriptors,
         args.w_atom,
         args.w_reaction,
+        args.depth_mol_ffn,
+        args.hidden_size_multiplier
     )
     opt = tf.keras.optimizers.Adam(learning_rate=args.ini_lr, clipnorm=5)
     model.compile(
@@ -254,12 +256,12 @@ for i in range(args.k_fold):
         # activation_energy_out = np.reshape(out['activation_energy'], [-1])
         # reaction_energy_out = np.reshape(out['reaction_energy'], [-1])
         for y_output, y_true in zip(out['activation_energy'], y['activation_energy']):
-            activation_energy_predicted = activation_energy_scaler.inverse_transform([[y_output]])[0][0]
+            activation_energy_predicted = activation_energy_scaler.inverse_transform([y_output])[0][0]
             activation_energies_predicted.append(activation_energy_predicted)
             mae_activation_energy += abs(activation_energy_predicted - y_true) / int(len(test_smiles))
             mse_activation_energy += (activation_energy_predicted - y_true) ** 2 / int(len(test_smiles))
         for y_output, y_true in zip(out['reaction_energy'], y['reaction_energy']):
-            reaction_energy_predicted = reaction_energy_scaler.inverse_transform([[y_output]])[0][0]
+            reaction_energy_predicted = reaction_energy_scaler.inverse_transform([y_output])[0][0]
             reaction_energies_predicted.append(reaction_energy_predicted)
             mae_reaction_energy += abs(reaction_energy_predicted - y_true) / int(len(test_smiles))
             mse_reaction_energy += (reaction_energy_predicted - y_true) ** 2 / int(len(test_smiles))

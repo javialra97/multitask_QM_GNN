@@ -5,7 +5,6 @@ datasets/.DS_Store
 utils/__pycache__/
 descriptors/.DS_Store
 test
-QM_GNN/.DS_Store
 GNN/graph_utils/__pycache__/
 bayesian_test/
 GNN/WLN/__pycache__/
@@ -13,3 +12,4 @@ GNN/graph_utils/__pycache__/
 environment.yml
 .vscode/
 trained_model/
+GNN/.DS_Store
