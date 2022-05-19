@@ -32,10 +32,12 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
         "--select_bond_descriptors",
         "none",
         "depth", "3",
-        "ini_lr", "0.0007",
-        "lr_ratio", "0.96",
-        "w_atom", "1.0",
-        "w_reaction", "3.0"
+        "ini_lr", "0.0009",
+        "lr_ratio", "0.98",
+        "w_atom", "3.5",
+        "w_reaction", "1.5",
+        "hidden_size_multiplier", "0",
+        "depth_mol_ffn", "2"
     ]
 
     experiments = [
@@ -197,7 +199,7 @@ def launch_jobs(experiments, log_dir):
             f.write("#SBATCH --nodelist node1237 \n")
             f.write("#SBATCH --mem 32000 \n")
             f.write(
-                f"#SBATCH --output={log_dir}/{experiment[23].split('/')[-1]}.out \n"
+                f"#SBATCH --output={log_dir}/{experiment[27].split('/')[-1]}.out \n"
             )
 
             f.write("source /home/tstuyver/.bashrc \n")

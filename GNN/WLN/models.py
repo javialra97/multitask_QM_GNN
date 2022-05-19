@@ -13,8 +13,7 @@ class WLNRegressor(tf.keras.Model):
                 hidden_size_multiplier=20, max_nb=10):
         super(WLNRegressor, self).__init__()
         self.hidden_size = hidden_size
-        self.reactants_WLN = WLN_Layer(hidden_size, depth, max_nb)
-        self.products_WLN = WLN_Layer(hidden_size, depth, max_nb)
+        self.WLN = WLN_Layer(hidden_size, depth, max_nb)
         self.selected_atom_descriptors = selected_atom_descriptors
         self.selected_reaction_descriptors = selected_reaction_descriptors
         self.w_atom = tf.Variable(w_atom, trainable=False)
@@ -69,8 +68,8 @@ class WLNRegressor(tf.keras.Model):
 
         res_inputs_p = inputs[10:]
 
-        res_atom_hidden_r = self.reactants_WLN(res_inputs[:6])
-        res_atom_hidden_p = self.products_WLN(res_inputs_p)
+        res_atom_hidden_r = self.WLN(res_inputs[:6])
+        res_atom_hidden_p = self.WLN(res_inputs_p)
         res_atom_hidden = res_atom_hidden_r - res_atom_hidden_p
         
         if "none" not in self.selected_atom_descriptors:
