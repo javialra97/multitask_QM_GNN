@@ -189,29 +189,29 @@ def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selecte
             qm_series = qm_descriptors.loc[smiles]
 
             partial_charge = qm_series['partial_charge'].reshape(-1, 1)
-            partial_charge = np.apply_along_axis(rbf_expansion, -1, partial_charge, 0.0, 0.05, 20)
+            partial_charge = np.apply_along_axis(rbf_expansion, -1, partial_charge, -6.0, 0.6, 20)
 
             fukui_elec = qm_series['fukui_elec'].reshape(-1, 1)
-            fukui_elec = np.apply_along_axis(rbf_expansion, -1, fukui_elec, 0, 0.05, 20)
+            fukui_elec = np.apply_along_axis(rbf_expansion, -1, fukui_elec, -6.0, 0.6, 20)
 
             fukui_neu = qm_series['fukui_neu'].reshape(-1, 1)
-            fukui_neu = np.apply_along_axis(rbf_expansion, -1, fukui_neu, 0, 0.05, 20)
+            fukui_neu = np.apply_along_axis(rbf_expansion, -1, fukui_neu, -6.0, 0.6, 20)
 
             spin_dens = qm_series['spin_dens'].reshape(-1, 1)
-            spin_dens = np.apply_along_axis(rbf_expansion, -1, spin_dens, 0, 0.05, 20)
+            spin_dens = np.apply_along_axis(rbf_expansion, -1, spin_dens, -6.0, 0.6, 20)
 
             spin_dens_triplet = qm_series['spin_dens_triplet'].reshape(-1, 1)
-            spin_dens_triplet = np.apply_along_axis(rbf_expansion, -1, spin_dens_triplet, 0, 0.05, 20)
+            spin_dens_triplet = np.apply_along_axis(rbf_expansion, -1, spin_dens_triplet, -6.0, 0.6, 20)
 
             nmr = qm_series['NMR'].reshape(-1, 1)
-            nmr = np.apply_along_axis(rbf_expansion, -1, nmr, 0.0, 0.05, 20)
+            nmr = np.apply_along_axis(rbf_expansion, -1, nmr, -6.0, 0.6, 20)
 
             if 'sasa' in selected_atom_descriptors or 'pint' in selected_atom_descriptors:
                 sasa = qm_series['sasa'].reshape(-1,1)
-                sasa = np.apply_along_axis(rbf_expansion, -1, sasa, 0.0, 0.05, 20)
+                sasa = np.apply_along_axis(rbf_expansion, -1, sasa, -6.0, 0.6, 20)
 
                 pint = qm_series['pint'].reshape(-1,1)
-                pint = np.apply_along_axis(rbf_expansion, -1, pint, 0.0, 0.05, 20) 
+                pint = np.apply_along_axis(rbf_expansion, -1, pint, -6.0, 0.6, 20)  
 
             selected_atom_descriptors = list(set(selected_atom_descriptors))
             selected_atom_descriptors.sort()
@@ -375,3 +375,5 @@ def get_mask(arr_list):
 
 if __name__ == "__main__":
     graph = _mol2graph("c1cccnc1")
+
+

@@ -27,11 +27,12 @@ def reaction_to_reactants(reactions):
     return list(reactants)
 
 
-def min_max_by_atom(atoms, data, scaler):
+def scale_by_atom_type(atoms, data, scaler):
     data = [scaler[a].transform(np.array([[d]]))[0][0] for a, d in zip(atoms, data)]
     return np.array(data)
 
-def min_max_normalize_atom_descs(df, scalers=None, train_smiles=None):
+
+def normalize_atom_descs(df, scalers=None, train_smiles=None):
     if train_smiles is not None:
         ref_df = df[df.smiles.isin(train_smiles)]
     else:
@@ -50,7 +51,7 @@ def min_max_normalize_atom_descs(df, scalers=None, train_smiles=None):
             df[column] = df[column].apply(lambda x: scaler.transform(x.reshape(-1, 1)).reshape(-1))
 
         elif column in ATOM_SCALE:
-            df[column] = df.progress_apply(lambda x: min_max_by_atom(x['atoms'], x[column], scalers[column]), axis=1)
+            df[column] = df.progress_apply(lambda x: scale_by_atom_type(x['atoms'], x[column], scalers[column]), axis=1)
 
         elif column in ['bond_order', 'bond_length']:
             df[f'{column}_matrix'] = df.apply(lambda x: bond_to_matrix(x['smiles'], x['bond_order']), axis=1)
@@ -70,7 +71,7 @@ def get_scaler(df):
 
     for column in df.columns:
         if column not in ATOM_SCALE and column != 'smiles':
-            scaler = MinMaxScaler()
+            scaler = StandardScaler()
             data = np.concatenate(df[column].tolist()).reshape(-1, 1)
 
             scaler.fit(data)
@@ -84,7 +85,7 @@ def get_scaler(df):
 
             scalers[column] = {}
             for k, d in data.items():
-                scaler = MinMaxScaler()
+                scaler = StandardScaler()
                 scalers[column][k] = scaler.fit(d.reshape(-1, 1))
 
     return scalers
@@ -113,7 +114,7 @@ def get_atoms(smiles):
     return atoms
 
 
-def min_max_normalize_reaction_descs(df, scalers=None, train_smiles=None):
+def normalize_reaction_descs(df, scalers=None, train_smiles=None):
     if train_smiles is not None:
         ref_df = df[df.smiles.isin(train_smiles)]
     else:

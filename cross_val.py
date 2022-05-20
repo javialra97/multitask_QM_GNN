@@ -4,7 +4,7 @@ import pickle
 from GNN.WLN.data_loading import Graph_DataLoader as dataloader
 from GNN.WLN.models import WLNRegressor as regressor
 from process_descs import predict_atom_descs, predict_reaction_descs
-from process_descs import min_max_normalize_atom_descs, reaction_to_reactants, min_max_normalize_reaction_descs
+from process_descs import reaction_to_reactants, normalize_atom_descs, normalize_reaction_descs
 from GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
 
 import tensorflow as tf
@@ -138,13 +138,15 @@ for i in range(args.k_fold):
     # set up the atom- and reaction-level descriptors
     if "none" not in args.select_atom_descriptors or "none" not in args.select_bond_descriptors:
         train_reactants = reaction_to_reactants(train["rxn_smiles"].tolist())
-        qmdf_temp, _ = min_max_normalize_atom_descs(qmdf.copy(), train_smiles=train_reactants)
-        initialize_qm_descriptors(df=qmdf_temp)
+        qmdf_tmp, _ = normalize_atom_descs(qmdf.copy(), train_smiles=train_reactants)
+        initialize_qm_descriptors(df=qmdf_tmp)
+        qmdf_tmp.to_csv('scaled_atom_descs.csv')
     if "none" not in args.select_reaction_descriptors:
-        df_reaction_desc_temp, _ = min_max_normalize_reaction_descs(
+        df_reaction_desc_tmp, _ = normalize_reaction_descs(
             df_reaction_desc.copy(), train_smiles=train["rxn_smiles"].tolist()
         )
-        initialize_reaction_descriptors(df=df_reaction_desc_temp)
+        initialize_reaction_descriptors(df=df_reaction_desc_tmp)
+        df_reaction_desc_tmp.to_csv('scaled_reaction_descs.csv')
 
     # set up dataloaders for training and validation sets
     train_gen = dataloader(

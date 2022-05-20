@@ -5,7 +5,7 @@ import argparse
 from GNN.WLN.data_loading import Graph_DataLoader as dataloader
 from GNN.WLN.models import WLNRegressor as regressor
 from process_descs import predict_atom_descs, predict_reaction_descs
-from process_descs import min_max_normalize_atom_descs, reaction_to_reactants, min_max_normalize_reaction_descs
+from process_descs import reaction_to_reactants, normalize_atom_descs, normalize_reaction_descs
 from GNN.graph_utils.mol_graph import initialize_qm_descriptors, initialize_reaction_descriptors
 
 import tensorflow as tf
@@ -109,10 +109,10 @@ def objective(args0, df_reactions, rxn_smiles_column, target_column1, target_col
 
         if "none" not in select_atom_descriptors or "none" not in select_bond_descriptors:
             train_reactants = reaction_to_reactants(train["rxn_smiles"].tolist())
-            qmdf_temp, _ = min_max_normalize_atom_descs(qmdf.copy(), train_smiles=train_reactants)
+            qmdf_temp, _ = normalize_atom_descs(qmdf.copy(), train_smiles=train_reactants)
             initialize_qm_descriptors(df=qmdf_temp)
         if "none" not in select_reaction_descriptors:
-            df_reaction_desc_temp, _ = min_max_normalize_reaction_descs(
+            df_reaction_desc_temp, _ = normalize_reaction_descs(
                 df_reaction_desc.copy(), train_smiles=train["rxn_smiles"].tolist()
             )
             initialize_reaction_descriptors(df=df_reaction_desc_temp)
