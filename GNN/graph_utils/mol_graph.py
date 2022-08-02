@@ -177,12 +177,12 @@ def _mol2graph(rs, selected_atom_descriptors, selected_bond_descriptors, selecte
         fatom_index_mol = {a.GetIntProp('molAtomMapNumber') - 1: a.GetIdx() for a in mol.GetAtoms()}
 
         if "none" not in selected_bond_descriptors:
-            qm_series = qm_descriptors.loc(smiles)
+            qm_series = qm_descriptors.loc[smiles]
 
             bond_index = np.expand_dims(qm_series['bond_order_matrix'], -1)
             bond_index = np.apply_along_axis(rbf_expansion, -1, bond_index, 0.5, 0.125, 20)
 
-            bond_distance = np.expand_dims(qm_series['distance_matrix'], -1)
+            bond_distance = np.expand_dims(qm_series['bond_length_matrix'], -1)
             bond_distance = np.apply_along_axis(rbf_expansion, -1, bond_distance, 0.5, 0.10, 20)
 
         if "none" not in selected_atom_descriptors:
