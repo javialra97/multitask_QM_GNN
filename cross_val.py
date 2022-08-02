@@ -12,6 +12,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
 import numpy as np
 import pandas as pd
 import math
+from tensorflow.keras.activations import relu
 
 from tqdm import tqdm
 from utils import lr_multiply_ratio, parse_args, create_logger, scale_targets
@@ -100,6 +101,7 @@ for i in range(args.k_fold):
 
     # scale target values based on target distribution in the training set
     activation_energy_scaler = scale_targets(train_activation_energy.copy())
+    activation_energy_threshold = activation_energy_scaler.transform([[0.0]])
     reaction_energy_scaler = scale_targets(train_reaction_energy.copy())
 
     train_activation_energy_scaled = (
@@ -181,7 +183,7 @@ for i in range(args.k_fold):
         args.w_atom,
         args.w_reaction,
         args.depth_mol_ffn,
-        args.hidden_size_multiplier
+        args.hidden_size_multiplier,
     )
     opt = tf.keras.optimizers.Adam(learning_rate=args.ini_lr, clipnorm=5)
     model.compile(
@@ -256,6 +258,7 @@ for i in range(args.k_fold):
         # activation_energy_out = np.reshape(out['activation_energy'], [-1])
         # reaction_energy_out = np.reshape(out['reaction_energy'], [-1])
         for y_output, y_true in zip(out['activation_energy'], y['activation_energy']):
+            # activation_energy_predicted = relu(activation_energy_scaler.inverse_transform([y_output])[0][0])
             activation_energy_predicted = activation_energy_scaler.inverse_transform([y_output])[0][0]
             activation_energies_predicted.append(activation_energy_predicted)
             mae_activation_energy += abs(activation_energy_predicted - y_true) / int(len(test_smiles))

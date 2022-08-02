@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras import layers, Input, Model
+from tensorflow.keras import layers
 import tensorflow.keras.backend as K
 from .layers import WLN_Layer, Global_Attention
 import numpy as np
@@ -9,8 +9,8 @@ np.set_printoptions(threshold=np.inf)
 
 class WLNRegressor(tf.keras.Model):
 
-    def __init__(self, hidden_size, depth, selected_atom_descriptors, selected_reaction_descriptors, w_atom, w_reaction, depth_mol_ffn=2, 
-                hidden_size_multiplier=20, max_nb=10):
+    def __init__(self, hidden_size, depth, selected_atom_descriptors, selected_reaction_descriptors, w_atom, w_reaction,
+                depth_mol_ffn=2, hidden_size_multiplier=20, max_nb=10):
         super(WLNRegressor, self).__init__()
         self.hidden_size = hidden_size
         self.WLN = WLN_Layer(hidden_size, depth, max_nb)
