@@ -5,7 +5,8 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 def lr_multiply_ratio(initial_lr, lr_ratio):
     def lr_multiplier(idx):
-        return initial_lr*lr_ratio**idx
+        return initial_lr * lr_ratio**idx
+
     return lr_multiplier
 
 
@@ -24,13 +25,15 @@ def create_logger(name: str) -> logging.Logger:
     logger.propagate = False
 
     # create file handler which logs even debug messages
-    fh = logging.FileHandler('{}/output.log'.format(name))
+    fh = logging.FileHandler("{}/output.log".format(name))
     fh.setLevel(logging.DEBUG)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
     ch.setLevel(logging.ERROR)
     # create formatter and add it to the handlers
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)
     # add the handlers to the logger

@@ -13,3 +13,4 @@ environment.yml
 .vscode/
 trained_model/
 GNN/.DS_Store
+scripts/

@@ -6,15 +6,22 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 tqdm.pandas()
 
-ATOM_SCALE = ['NMR', 'sasa']
+ATOM_SCALE = ["NMR", "sasa"]
 
 
 def check_chemprop_out(df):
     invalid = []
-    for _,r in df.iterrows():
-        for c in ['partial_charge', 'fukui_neu', 'fukui_elec', 'NMR', 'bond_order', 'bond_length']:
+    for _, r in df.iterrows():
+        for c in [
+            "partial_charge",
+            "fukui_neu",
+            "fukui_elec",
+            "NMR",
+            "bond_order",
+            "bond_length",
+        ]:
             if np.any(pd.isna(r[c])):
-                invalid.append(r['smiles'])
+                invalid.append(r["smiles"])
                 break
     return invalid
 
@@ -22,7 +29,7 @@ def check_chemprop_out(df):
 def reaction_to_reactants(reactions):
     reactants = set()
     for r in reactions:
-        rs = r.split('>')[0].split('.')
+        rs = r.split(">")[0].split(".")
         reactants.update(set(rs))
     return list(reactants)
 
@@ -42,22 +49,40 @@ def normalize_atom_descs(df, scalers=None, train_smiles=None):
         scalers = get_scaler(ref_df)
 
     if ATOM_SCALE:
-        print('postprocessing atom-wise scaling')
-        df['atoms'] = df.smiles.apply(lambda x: get_atoms(x))
+        print("postprocessing atom-wise scaling")
+        df["atoms"] = df.smiles.apply(lambda x: get_atoms(x))
 
     for column in df.columns:
-        if column not in ATOM_SCALE and column not in ['smiles', 'atoms', 'bond_order', 'bond_length']:
+        if column not in ATOM_SCALE and column not in [
+            "smiles",
+            "atoms",
+            "bond_order",
+            "bond_length",
+        ]:
             scaler = scalers[column]
-            df[column] = df[column].apply(lambda x: scaler.transform(x.reshape(-1, 1)).reshape(-1))
+            df[column] = df[column].apply(
+                lambda x: scaler.transform(x.reshape(-1, 1)).reshape(-1)
+            )
 
         elif column in ATOM_SCALE:
-            df[column] = df.progress_apply(lambda x: scale_by_atom_type(x['atoms'], x[column], scalers[column]), axis=1)
+            df[column] = df.progress_apply(
+                lambda x: scale_by_atom_type(x["atoms"], x[column], scalers[column]),
+                axis=1,
+            )
 
-        elif column in ['bond_order', 'bond_length']:
-            df[f'{column}_matrix'] = df.apply(lambda x: bond_to_matrix(x['smiles'], x['bond_order']), axis=1)
+        elif column in ["bond_order", "bond_length"]:
+            df[f"{column}_matrix"] = df.apply(
+                lambda x: bond_to_matrix(x["smiles"], x["bond_order"]), axis=1
+            )
 
-    df = df[[column for column in df.columns if column not in ['atoms', 'bond_order', 'bond_length']]]
-    df = df.set_index('smiles')
+    df = df[
+        [
+            column
+            for column in df.columns
+            if column not in ["atoms", "bond_order", "bond_length"]
+        ]
+    ]
+    df = df.set_index("smiles")
 
     return df, scalers
 
@@ -70,7 +95,7 @@ def get_scaler(df):
         atoms = np.concatenate(atoms.tolist())
 
     for column in df.columns:
-        if column not in ATOM_SCALE and column != 'smiles':
+        if column not in ATOM_SCALE and column != "smiles":
             scaler = StandardScaler()
             data = np.concatenate(df[column].tolist()).reshape(-1, 1)
 
@@ -80,8 +105,13 @@ def get_scaler(df):
         elif column in ATOM_SCALE:
             data = np.concatenate(df[column].tolist())
 
-            data = pd.DataFrame({'atoms': atoms, 'data': data})
-            data = data.groupby('atoms').agg({'data': lambda x: list(x)})['data'].apply(lambda x: np.array(x)).to_dict()
+            data = pd.DataFrame({"atoms": atoms, "data": data})
+            data = (
+                data.groupby("atoms")
+                .agg({"data": lambda x: list(x)})["data"]
+                .apply(lambda x: np.array(x))
+                .to_dict()
+            )
 
             scalers[column] = {}
             for k, d in data.items():
@@ -99,7 +129,9 @@ def bond_to_matrix(smiles, bond_vector):
     bond_matrix = np.zeros([len(m.GetAtoms()), len(m.GetAtoms())])
     for i, bp in enumerate(bond_vector):
         b = m.GetBondWithIdx(i)
-        bond_matrix[b.GetBeginAtomIdx(), b.GetEndAtomIdx()] = bond_matrix[b.GetEndAtomIdx(), b.GetBeginAtomIdx()] = bp
+        bond_matrix[b.GetBeginAtomIdx(), b.GetEndAtomIdx()] = bond_matrix[
+            b.GetEndAtomIdx(), b.GetBeginAtomIdx()
+        ] = bp
 
     return bond_matrix
 
@@ -123,7 +155,7 @@ def normalize_reaction_descs(df, scalers=None, train_smiles=None):
     if scalers is None:
         scalers = {}
         for column in df.columns:
-            if column != 'smiles':
+            if column != "smiles":
                 scaler = StandardScaler()
                 data = ref_df[column].values.reshape(-1, 1).tolist()
 
@@ -131,7 +163,7 @@ def normalize_reaction_descs(df, scalers=None, train_smiles=None):
                 scalers[column] = scaler
 
     for column in df.columns:
-        if column != 'smiles':
+        if column != "smiles":
             scaler = scalers[column]
             df[column] = df[column].apply(lambda x: scaler.transform([[x]])[0])
 

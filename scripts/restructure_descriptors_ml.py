@@ -16,12 +16,22 @@ def convert_str_to_array(string):
 
 descriptors = pd.read_csv("../descriptors/descriptors_ml.csv")
 
-descriptors["partial_charge"] = descriptors["partial_charge"].apply(lambda x: convert_str_to_array(x))
-descriptors["fukui_neu"] = descriptors["fukui_neu"].apply(lambda x: convert_str_to_array(x))
-descriptors["fukui_elec"] = descriptors["fukui_elec"].apply(lambda x: convert_str_to_array(x))
+descriptors["partial_charge"] = descriptors["partial_charge"].apply(
+    lambda x: convert_str_to_array(x)
+)
+descriptors["fukui_neu"] = descriptors["fukui_neu"].apply(
+    lambda x: convert_str_to_array(x)
+)
+descriptors["fukui_elec"] = descriptors["fukui_elec"].apply(
+    lambda x: convert_str_to_array(x)
+)
 descriptors["NMR"] = descriptors["NMR"].apply(lambda x: convert_str_to_array(x))
-descriptors["bond_order"] = descriptors["bond_order"].apply(lambda x: convert_str_to_array(x))
-descriptors["bond_length"] = descriptors["bond_length"].apply(lambda x: convert_str_to_array(x))
+descriptors["bond_order"] = descriptors["bond_order"].apply(
+    lambda x: convert_str_to_array(x)
+)
+descriptors["bond_length"] = descriptors["bond_length"].apply(
+    lambda x: convert_str_to_array(x)
+)
 
 descriptors.to_pickle("../descriptors/descriptors_ml.pkl")
 descriptors.to_csv("../descriptors/test_ml.csv")

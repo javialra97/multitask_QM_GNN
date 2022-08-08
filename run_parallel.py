@@ -31,13 +31,20 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
         "5",
         "--select_bond_descriptors",
         "none",
-        "depth", "3",
-        "ini_lr", "0.0009",
-        "lr_ratio", "0.98",
-        "w_atom", "3.5",
-        "w_reaction", "1.5",
-        "hidden_size_multiplier", "0",
-        "depth_mol_ffn", "2"
+        "depth",
+        "3",
+        "ini_lr",
+        "0.0009",
+        "lr_ratio",
+        "0.98",
+        "w_atom",
+        "3.5",
+        "w_reaction",
+        "1.5",
+        "hidden_size_multiplier",
+        "0",
+        "depth_mol_ffn",
+        "2",
     ]
 
     experiments = [
@@ -86,7 +93,7 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
             "sasa",
             "pint",
             "--select_reaction_descriptors",
-            "none"
+            "none",
         ],
         [
             "--model_dir",
@@ -103,7 +110,7 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
             "fukui_elec",
             "fukui_neu",
             "--select_reaction_descriptors",
-            "none"
+            "none",
         ],
         [
             "--model_dir",
@@ -134,7 +141,7 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
             "E_r",
             "G",
             "G_alt1",
-            "G_alt2"
+            "G_alt2",
         ],
         [
             "--model_dir",

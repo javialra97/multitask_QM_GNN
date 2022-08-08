@@ -13,9 +13,13 @@ def get_dataframe(test_file, true_file):
     for j in range(len(df_true_list)):
         for k in range(len(df_test_list)):
             if df_true_list[j][1] == df_test_list[k][1]:
-                correlation_list.append([df_true_list[j][1], df_true_list[j][-1], df_test_list[k][-1]])
+                correlation_list.append(
+                    [df_true_list[j][1], df_true_list[j][-1], df_test_list[k][-1]]
+                )
 
-    correlation_df = pd.DataFrame(correlation_list, columns=['reaction_id', 'activation_energy', "predicted"])
+    correlation_df = pd.DataFrame(
+        correlation_list, columns=["reaction_id", "activation_energy", "predicted"]
+    )
 
     return correlation_df
 
@@ -26,11 +30,12 @@ folder_locations = ["cross_val_QM/Hong_charges_fukuis/"]
 i = 0
 
 for location in folder_locations:
-    test_files = [location + "test_predicted_1.csv",
-                  location + "test_predicted_2.csv",
-                  location + "test_predicted_3.csv",
-                  location + "test_predicted_4.csv",
-                  ]
+    test_files = [
+        location + "test_predicted_1.csv",
+        location + "test_predicted_2.csv",
+        location + "test_predicted_3.csv",
+        location + "test_predicted_4.csv",
+    ]
 
     correlation_df_tmp = get_dataframe(location + "test_predicted_0.csv", true_file)
 

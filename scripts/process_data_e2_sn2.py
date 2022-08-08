@@ -8,7 +8,7 @@ from time import sleep
 def get_edits(smiles, preference):
     if "." not in smiles:
         return None
-    #print(smiles)
+    # print(smiles)
 
     cand_beta_c = []
     configs = []
@@ -20,22 +20,41 @@ def get_edits(smiles, preference):
     try:
         for atom in mol.GetAtoms():
             if atom.GetFormalCharge() == -1:
-                if atom.GetSymbol() == 'F' or atom.GetSymbol() == 'Cl' or atom.GetSymbol() == 'Br' or atom.GetSymbol() == 'H':
+                if (
+                    atom.GetSymbol() == "F"
+                    or atom.GetSymbol() == "Cl"
+                    or atom.GetSymbol() == "Br"
+                    or atom.GetSymbol() == "H"
+                ):
                     nucleophile = atom.GetAtomMapNum() - 1
 
         for atom in mol.GetAtoms():
             if atom.GetFormalCharge() == 0:
-                if atom.GetSymbol() == 'F' or atom.GetSymbol() == 'Cl' or atom.GetSymbol() == 'Br':
+                if (
+                    atom.GetSymbol() == "F"
+                    or atom.GetSymbol() == "Cl"
+                    or atom.GetSymbol() == "Br"
+                ):
                     leaving_group = atom.GetAtomMapNum() - 1
 
         for atom in mol.GetAtoms():
-            if atom.GetSymbol() == 'C' and leaving_group in list(map(lambda x: x.GetAtomMapNum() - 1, atom.GetNeighbors())):
+            if atom.GetSymbol() == "C" and leaving_group in list(
+                map(lambda x: x.GetAtomMapNum() - 1, atom.GetNeighbors())
+            ):
                 alpha_c = atom.GetAtomMapNum() - 1
 
         for atom in mol.GetAtoms():
-            if atom.GetSymbol() == 'C' and alpha_c in list(map(lambda x: x.GetAtomMapNum() - 1, atom.GetNeighbors())) \
-                    and 3.0 not in list(map(lambda x: x.GetBondTypeAsDouble(), atom.GetBonds())):
-                if len(list(map(lambda x: x.GetAtomMapNum() - 1, atom.GetNeighbors()))) > 1:
+            if (
+                atom.GetSymbol() == "C"
+                and alpha_c
+                in list(map(lambda x: x.GetAtomMapNum() - 1, atom.GetNeighbors()))
+                and 3.0
+                not in list(map(lambda x: x.GetBondTypeAsDouble(), atom.GetBonds()))
+            ):
+                if (
+                    len(list(map(lambda x: x.GetAtomMapNum() - 1, atom.GetNeighbors())))
+                    > 1
+                ):
                     beta_c = atom.GetAtomMapNum() - 1
                 else:
                     cand_beta_c.append(atom.GetAtomMapNum() - 1)
@@ -46,14 +65,18 @@ def get_edits(smiles, preference):
             print("\n \n \n")
             beta_c = cand_beta_c[0]
 
-        #print(leaving_group, alpha_c, beta_c, nucleophile)
+        # print(leaving_group, alpha_c, beta_c, nucleophile)
 
         if preference == "sn2":
-            configs.append(get_substitution_product(leaving_group, alpha_c, nucleophile))
-            #configs.append(get_elimination_product(leaving_group, alpha_c, beta_c))
+            configs.append(
+                get_substitution_product(leaving_group, alpha_c, nucleophile)
+            )
+            # configs.append(get_elimination_product(leaving_group, alpha_c, beta_c))
         elif preference == "e2":
-            configs.append(get_elimination_product(leaving_group, alpha_c, beta_c, nucleophile))
-            #configs.append(get_substitution_product(leaving_group, alpha_c, nucleophile))
+            configs.append(
+                get_elimination_product(leaving_group, alpha_c, beta_c, nucleophile)
+            )
+            # configs.append(get_substitution_product(leaving_group, alpha_c, nucleophile))
 
         return configs
 
@@ -76,7 +99,7 @@ def correct_smiles(smiles):
         mol = Chem.MolFromSmiles(smiles)
         number = len(list(map(lambda x: x.GetAtomMapNum() - 1, mol.GetAtoms()))) + 1
         smiles = "[Br-:" + str(number) + "]." + smiles
-        #print(smiles)
+        # print(smiles)
 
     smiles1 = smiles.split(".")[0]
     smiles2 = smiles.split(".")[1]
@@ -89,7 +112,7 @@ def correct_smiles(smiles):
 
 df = pd.read_csv("activation_energies_smiles_numbered_mp2_full.csv")
 
-print(df['smiles'].head())
+print(df["smiles"].head())
 
 df["smiles"] = df["smiles"].apply(lambda x: correct_smiles(x))
 
@@ -100,10 +123,10 @@ errors = 0
 num_e2 = 0
 
 for i in range(len(df_list)):
-    if df_list[i][-2] == 'e2':
+    if df_list[i][-2] == "e2":
         num_e2 += 1
-        #continue
-    #else:
+        # continue
+    # else:
     configs = get_edits(df_list[i][-3], df_list[i][-2])
     if configs:
         print(configs)
@@ -115,7 +138,7 @@ for i in range(len(df_list)):
     else:
         errors += 1
         problematic_cases.append([i, df_list[i]])
-        #print(df_list[i][-2])
+        # print(df_list[i][-2])
 
 
 for i in range(len(problematic_cases)):
@@ -123,7 +146,10 @@ for i in range(len(problematic_cases)):
 
 print(errors)
 
-config_df = pd.DataFrame(configs_list, columns=['reaction_id', 'rxn_smiles', 'bond_edits', 'activation_energy'])
+config_df = pd.DataFrame(
+    configs_list,
+    columns=["reaction_id", "rxn_smiles", "bond_edits", "activation_energy"],
+)
 
 nonsensical_barriers = config_df[config_df["activation_energy"] > 1000]
 
@@ -132,6 +158,3 @@ print(nonsensical_barriers)
 print(num_e2)
 print(len(config_df))
 config_df.to_csv("data_test_regression_mp2_final.csv")
-
-
-

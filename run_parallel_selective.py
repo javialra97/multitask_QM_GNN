@@ -309,8 +309,8 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
             "homo_1",
             "lumo_1",
             "homo_2",
-            "lumo_2"
-        ]
+            "lumo_2",
+        ],
     ]
 
     command_lines = []

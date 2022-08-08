@@ -18,11 +18,13 @@ descriptors = pd.read_csv("../descriptors/descriptors_Lowdin.csv")
 
 smiles_list = descriptors.smiles.values.tolist()
 
-df["reactant_desc_avail"] = df["rxn_smiles"].apply(lambda x: check_desc_avail(x, smiles_list))
+df["reactant_desc_avail"] = df["rxn_smiles"].apply(
+    lambda x: check_desc_avail(x, smiles_list)
+)
 
 df = df[df["reactant_desc_avail"] != "not_avail"]
 
-df2 = df[["reaction_id","rxn_smiles","reaction_core","activation_energy"]]
+df2 = df[["reaction_id", "rxn_smiles", "reaction_core", "activation_energy"]]
 
 print(df2.head())
 print(len(df2))
