@@ -62,18 +62,18 @@ for i in range(args.k_fold):
     # split data for fold
     if args.data_path is not None:
         test = df[k_fold_arange[i] : k_fold_arange[i + 1]]
-        valid = df[~df.reaction_id.isin(test.reaction_id)].sample(
+        valid = df[~df[f"{args.rxn_id_column}"].isin(test[f"{args.rxn_id_column}"])].sample(
             frac=1 / (args.k_fold - 1), random_state=args.random_state
         )
         train = df[
             ~(
-                df.reaction_id.isin(test.reaction_id)
-                | df.reaction_id.isin(valid.reaction_id)
+                df[f"{args.rxn_id_column}"].isin(test[f"{args.rxn_id_column}"])
+                | df[f"{args.rxn_id_column}"].isin(valid[f"{args.rxn_id_column}"])
             )
         ]
     elif args.train_valid_set_path is not None:
         valid = df.sample(frac=1 / (args.k_fold - 1), random_state=args.random_state)
-        train = df[~(df.reaction_id.isin(valid.reaction_id))]
+        train = df[~(df[f"{args.rxn_id_column}"].isin(valid[f"{args.rxn_id_column}"]))]
 
     # downsample training and validation sets in case args.sample keyword has been selected
     if args.sample:
@@ -88,7 +88,7 @@ for i in range(args.k_fold):
     )
 
     # process training data
-    train_rxn_id = train["reaction_id"].values
+    train_rxn_id = train[f"{args.rxn_id_column}"].values
     train_smiles = (
         train[f"{args.rxn_smiles_column}"].str.split(">", expand=True)[0].values
     )
@@ -114,7 +114,7 @@ for i in range(args.k_fold):
     ) 
 
     # process validation data
-    valid_rxn_id = valid["reaction_id"].values
+    valid_rxn_id = valid[f"{args.rxn_id_column}"].values
     valid_smiles = (
         valid[f"{args.rxn_smiles_column}"].str.split(">", expand=True)[0].values
     )
@@ -220,7 +220,7 @@ for i in range(args.k_fold):
     model.load_weights(save_name)
 
     # process testing data
-    test_rxn_id = test["reaction_id"].values
+    test_rxn_id = test[f"{args.rxn_id_column}"].values
     test_smiles = (
         test[f"{args.rxn_smiles_column}"].str.split(">", expand=True)[0].values
     )
@@ -246,17 +246,12 @@ for i in range(args.k_fold):
     test_steps = np.ceil(len(test_smiles) / args.selec_batch_size).astype(int)
 
     # run model for testing set, save predictions and store metrics
-    activation_energies_predicted = []
-    reaction_energies_predicted = []
-    mse_activation_energy = 0
-    mse_reaction_energy = 0
-    mae_activation_energy = 0
-    mae_reaction_energy = 0
+    activation_energies_predicted, reaction_energies_predicted = [], []
+    mse_activation_energy, mse_reaction_energy = 0, 0
+    mae_activation_energy, mae_reaction_energy = 0, 0
     
     for x, y in tqdm(test_gen, total=int(len(test_smiles) / args.selec_batch_size)):
         out = model.predict_on_batch(x)
-        # activation_energy_out = np.reshape(out['activation_energy'], [-1])
-        # reaction_energy_out = np.reshape(out['reaction_energy'], [-1])
         for y_output, y_true in zip(out['activation_energy'], y['activation_energy']):
             activation_energy_predicted = activation_energy_scaler.inverse_transform([y_output])[0][0]
             activation_energies_predicted.append(activation_energy_predicted)
@@ -270,7 +265,7 @@ for i in range(args.k_fold):
 
     rmse_reaction_energy = np.sqrt(mse_reaction_energy)
     rmse_activation_energy = np.sqrt(mse_activation_energy)
-    test_predicted = pd.DataFrame({"reaction_id": test_rxn_id, "predicted_activation_energy": activation_energies_predicted,
+    test_predicted = pd.DataFrame({f"{args.rxn_id_column}": test_rxn_id, "predicted_activation_energy": activation_energies_predicted,
                         "predicted_reaction_energy": reaction_energies_predicted})
     test_predicted.to_csv(os.path.join(args.model_dir, f"test_predicted_{i}.csv"))
 
