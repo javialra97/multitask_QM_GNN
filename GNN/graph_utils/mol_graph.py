@@ -9,8 +9,7 @@ elem_list = ['C', 'O', 'N', 'F', 'Br', 'Cl', 'S',
 
 atom_fdim_geo = len(elem_list) + 6 + 6 + 6 + 1
 
-#bond_fdim_geo = 6
-bond_fdim = 6 #20 + 20
+bond_fdim = 6
 max_nb = 10
 
 qm_descriptors = None
