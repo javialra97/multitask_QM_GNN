@@ -163,6 +163,12 @@ def parse_args(cross_val=False):
         default=None,
         help="In case of selective sampling, indicates path to the test set csv-file",
     )
+    parser.add_argument(
+        "--ensemble_size",
+        type=int,
+        default=1,
+        help="The number of models to be ensembled",
+    )
 
     if cross_val:
         parser.add_argument(

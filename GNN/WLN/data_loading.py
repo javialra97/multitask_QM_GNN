@@ -16,11 +16,7 @@ from ..graph_utils.ioutils_direct import binary_features_batch
 class Graph_DataLoader(Sequence):
     def __init__(
         self,
-        smiles,
-        product,
-        rxn_id,
-        activation_energy,
-        reaction_energy,
+        dataset,
         batch_size,
         selected_atom_descriptors,
         selected_bond_descriptors,
@@ -28,11 +24,11 @@ class Graph_DataLoader(Sequence):
         shuffle=True,
         predict=False,
     ):
-        self.smiles = smiles
-        self.product = product
-        self.rxn_id = rxn_id
-        self.activation_energy = activation_energy
-        self.reaction_energy = reaction_energy
+        self.smiles = dataset.smiles
+        self.product = dataset.product
+        self.rxn_id = dataset.rxn_id
+        self.activation_energy = dataset.activation_energy_scaled
+        self.reaction_energy = dataset.reaction_energy_scaled
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.predict = predict
