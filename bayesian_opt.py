@@ -4,16 +4,12 @@ import argparse
 
 from GNN.WLN.data_loading import Graph_DataLoader as dataloader
 from GNN.WLN.models import WLNRegressor as regressor
-from process_descs import predict_atom_descs, predict_reaction_descs
-from process_descs import (
-    reaction_to_reactants,
-    normalize_atom_descs,
-    normalize_reaction_descs,
-)
+
 from GNN.graph_utils.mol_graph import (
     initialize_qm_descriptors,
     initialize_reaction_descriptors,
 )
+from process_descs import setup_and_scale_descriptors
 
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
@@ -21,8 +17,10 @@ import numpy as np
 import pandas as pd
 
 from types import SimpleNamespace
-from tqdm import tqdm
-from utils import lr_multiply_ratio, create_logger, scale_targets
+
+from utils import lr_multiply_ratio, create_logger
+from utils import Dataset
+from utils import predict_single_model, evaluate
 
 from functools import partial
 from hyperopt import fmin, hp, tpe
@@ -101,94 +99,44 @@ def objective(
         # split data for fold
         if df_reactions is not None:
             valid = df_reactions[k_fold_arange[i] : k_fold_arange[i + 1]]
-            train = df_reactions[~df_reactions.reaction_id.isin(valid.reaction_id)]
+            train = df_reactions[~df_reactions[f"{rxn_smiles_column}"].isin(valid[f"{rxn_smiles_column}"])]
 
         # process training data
-        train_rxn_id = train["reaction_id"].values
-        train_smiles = (
-            train[f"{rxn_smiles_column}"].str.split(">", expand=True)[0].values
-        )
-        train_product = (
-            train[f"{rxn_smiles_column}"].str.split(">", expand=True)[2].values
-        )
-        train_activation_energy = train[f"{target_column1}"].values
-        train_reaction_energy = train[f"{target_column2}"].values
+        train_dataset = Dataset(train, args)
+        valid_dataset = Dataset(valid, args, train_dataset.output_scalers)
 
-        # scale target values based on target distribution in the training set
-        activation_energy_scaler = scale_targets(train_activation_energy.copy())
-        reaction_energy_scaler = scale_targets(train_reaction_energy.copy())
-
-        train_activation_energy_scaled = (
-            train[f"{target_column1}"]
-            .apply(lambda x: activation_energy_scaler.transform([[x]])[0][0])
-            .values
-        )
-        train_reaction_energy_scaled = (
-            train[f"{target_column2}"]
-            .apply(lambda x: reaction_energy_scaler.transform([[x]])[0][0])
-            .values
-        )
-
-        # process validation data
-        valid_rxn_id = valid["reaction_id"].values
-        valid_smiles = (
-            valid[f"{rxn_smiles_column}"].str.split(">", expand=True)[0].values
-        )
-        valid_product = (
-            valid[f"{rxn_smiles_column}"].str.split(">", expand=True)[2].values
-        )
-
-        valid_activation_energy_scaled = (
-            valid[f"{target_column1}"]
-            .apply(lambda x: activation_energy_scaler.transform([[x]])[0][0])
-            .values
-        )
-        valid_reaction_energy_scaled = (
-            valid[f"{target_column2}"]
-            .apply(lambda x: reaction_energy_scaler.transform([[x]])[0][0])
-            .values
-        )
-
-        if (
-            "none" not in select_atom_descriptors
-            or "none" not in select_bond_descriptors
-        ):
-            train_reactants = reaction_to_reactants(train["rxn_smiles"].tolist())
-            qmdf_temp, _ = normalize_atom_descs(
-                qmdf.copy(), train_smiles=train_reactants
+        # set up the atom- and reaction-level descriptors
+        if isinstance(qmdf, pd.DataFrame) or isinstance(df_reaction_desc, pd.DataFrame):
+            (
+                qmdf_normalized,
+                df_reaction_desc_normalized,
+                _,
+                _,
+            ) = setup_and_scale_descriptors(
+                qmdf, df_reaction_desc, train_dataset.rxn_smiles, i
             )
-            initialize_qm_descriptors(df=qmdf_temp)
-        if "none" not in select_reaction_descriptors:
-            df_reaction_desc_temp, _ = normalize_reaction_descs(
-                df_reaction_desc.copy(), train_smiles=train["rxn_smiles"].tolist()
-            )
-            initialize_reaction_descriptors(df=df_reaction_desc_temp)
+            if isinstance(qmdf_normalized, pd.DataFrame):
+                initialize_qm_descriptors(df=qmdf_normalized)
+            if isinstance(df_reaction_desc_normalized, pd.DataFrame):
+                initialize_reaction_descriptors(df=df_reaction_desc_normalized)
 
         # set up dataloaders for training and validation sets
         train_gen = dataloader(
-            train_smiles,
-            train_product,
-            train_rxn_id,
-            train_activation_energy_scaled,
-            train_reaction_energy_scaled,
-            selec_batch_size,
-            select_atom_descriptors,
-            select_bond_descriptors,
-            select_reaction_descriptors,
+            train_dataset,
+            args.selec_batch_size,
+            args.select_atom_descriptors,
+            args.select_bond_descriptors,
+            args.select_reaction_descriptors,
         )
-        train_steps = np.ceil(len(train_smiles) / selec_batch_size).astype(int)
+        train_steps = np.ceil(len(train_dataset) / args.selec_batch_size).astype(int)
         valid_gen = dataloader(
-            valid_smiles,
-            valid_product,
-            valid_rxn_id,
-            valid_activation_energy_scaled,
-            valid_reaction_energy_scaled,
-            selec_batch_size,
-            select_atom_descriptors,
-            select_bond_descriptors,
-            select_reaction_descriptors,
+            valid_dataset,
+            args.selec_batch_size,
+            args.select_atom_descriptors,
+            args.select_bond_descriptors,
+            args.select_reaction_descriptors,
         )
-        valid_steps = np.ceil(len(valid_smiles) / selec_batch_size).astype(int)
+        valid_steps = np.ceil(len(valid_dataset) / args.selec_batch_size).astype(int)
 
         # set up tensorflow model
         model = regressor(
@@ -240,40 +188,25 @@ def objective(
 
         model.load_weights(save_name)
 
-        activation_energies_predicted = []
-        reaction_energies_predicted = []
-        mse_activation_energy = 0
-        mse_reaction_energy = 0
+         # get best predictions on validation set
+        (
+            predicted_activation_energies,
+            predicted_reaction_energies,
+        ) = predict_single_model(
+            valid_gen, args.selec_batch_size, model, valid_dataset.output_scalers
+        )
 
-        for x, y in tqdm(valid_gen, total=int(len(valid_smiles) / selec_batch_size)):
-            out = model.predict_on_batch(x)
-            for y_output, y_true in zip(
-                out["activation_energy"], y["activation_energy"]
-            ):
-                activation_energy_predicted = (
-                    activation_energy_scaler.inverse_transform([y_output])[0][0]
-                )
-                y_true_unscaled = activation_energy_scaler.inverse_transform(
-                    [[y_true]]
-                )[0][0]
-                activation_energies_predicted.append(activation_energy_predicted)
-                mse_activation_energy += (
-                    activation_energy_predicted - y_true_unscaled
-                ) ** 2 / int(len(valid_smiles))
-            for y_output, y_true in zip(out["reaction_energy"], y["reaction_energy"]):
-                reaction_energy_predicted = reaction_energy_scaler.inverse_transform(
-                    [y_output]
-                )[0][0]
-                y_true_unscaled = reaction_energy_scaler.inverse_transform([[y_true]])[
-                    0
-                ][0]
-                reaction_energies_predicted.append(reaction_energy_predicted)
-                mse_reaction_energy += (
-                    reaction_energy_predicted - y_true_unscaled
-                ) ** 2 / int(len(valid_smiles))
-
-        rmse_reaction_energy = np.sqrt(mse_reaction_energy)
-        rmse_activation_energy = np.sqrt(mse_activation_energy)
+        (
+            rmse_activation_energy,
+            rmse_reaction_energy,
+            _,
+            _,
+        ) = evaluate(
+            predicted_activation_energies,
+         predicted_reaction_energies,
+            valid_dataset.activation_energy,
+            valid_dataset.reaction_energy,
+        )
 
         rmse_activation_energy_list.append(rmse_activation_energy)
         rmse_reaction_energy_list.append(rmse_reaction_energy)
@@ -305,7 +238,7 @@ def gnn_bayesian(
     if "none" not in select_atom_descriptors or "none" not in select_bond_descriptors:
         if qm_pred:
             # TODO: complete this
-            qmdf = predict_atom_descs(None, normalize=False)
+            raise KeyError
         else:
             qmdf = pd.read_pickle(atom_desc_path)
 
