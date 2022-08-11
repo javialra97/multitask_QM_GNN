@@ -4,72 +4,60 @@ from tqdm import tqdm
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
-def evaluate(test_gen, selec_batch_size, models, scalers):
-    """Make predictions for the test set, save them and return statistics.
+def predict_single_model(test_gen, selec_batch_size, model, output_scalers):
+    """Predicts output for a single model.
 
     Args:
-        test_gen (Dataloader): dataloader object for the test set
+        test_gen (GNN.WLN.Dataloader): a dataloader object that generates input
         selec_batch_size (int): the batch size
-        models (List[WLNRegressor]): list of models (ensemble)
-        scalers (list[sklearn.StandardScaler]): list of scalers for each model (ensemble)
+        model (GNN.WLN.WLNRegressor): the GNN model
+        output_scalers (List[StandardScalers]): scalers to inverse transform output from GNN
+
+    Returns:
+        predicted_activation_energy (np.array): array of predicted activation energy values
+        predicted_reaction_energy (np.array): array of predicted reaction energy values
     """
-    # initialize
     predicted_activation_energies_per_batch = []
     predicted_reaction_energies_per_batch = []
-    true_activation_energies_per_batch, true_reaction_energies_per_batch = [], []
 
-    # make predictions on test set per batch and take ensemble-average
-    for x, y in tqdm(test_gen, total=int(len(test_gen.smiles) / selec_batch_size)):
-        predicted_activation_energies_batch = np.empty(
-            shape=(len(models), selec_batch_size)
+    for x in tqdm(test_gen, total=int(len(test_gen.smiles) / selec_batch_size)):
+        out = model.predict_on_batch(x)
+        predicted_activation_energies_batch = (
+            output_scalers[0].inverse_transform(out["activation_energy"]).reshape(-1)
         )
-        predicted_reaction_energies_batch = np.empty(
-            shape=(len(models), selec_batch_size)
+        predicted_reaction_energies_batch = (
+            output_scalers[1].inverse_transform(out["reaction_energy"]).reshape(-1)
         )
-        for i, model in enumerate(models):
-            # the scaled targets in test_gen correspond to the last scaler
-            if i == len(scalers) - 1:
-                true_activation_energies_per_batch.append(
-                    scalers[i][0].inverse_transform(y["activation_energy"])
-                )
-                true_reaction_energies_per_batch.append(
-                    scalers[i][1].inverse_transform(y["reaction_energy"])
-                )
-            out = model.predict_on_batch(x)
-            predicted_activation_energies_batch[i] = (
-                scalers[i][0].inverse_transform(out["activation_energy"]).reshape(10)
-            )
-            predicted_reaction_energies_batch[i] = (
-                scalers[i][1].inverse_transform(out["reaction_energy"]).reshape(10)
-            )
 
-        predicted_activation_energies_batch_avg = np.sum(
-            predicted_activation_energies_batch, axis=0
-        ) / len(models)
-        predicted_reaction_energies_batch_avg = np.sum(
-            predicted_reaction_energies_batch, axis=0
-        ) / len(models)
         predicted_activation_energies_per_batch.append(
-            predicted_activation_energies_batch_avg
+            predicted_activation_energies_batch
         )
-        predicted_reaction_energies_per_batch.append(
-            predicted_reaction_energies_batch_avg
-        )
+        predicted_reaction_energies_per_batch.append(predicted_reaction_energies_batch)
 
-    # combine individual batches
-    predicted_activation_energies = np.array(
-        predicted_activation_energies_per_batch
-    ).reshape(-1)
-    predicted_reaction_energies = np.array(
-        predicted_reaction_energies_per_batch
-    ).reshape(-1)
-    true_activation_energies = np.array(true_activation_energies_per_batch).reshape(-1)
-    true_reaction_energies = np.array(true_reaction_energies_per_batch).reshape(-1)
+    predicted_activation_energies = np.hstack(predicted_activation_energies_per_batch)
+    predicted_reaction_energies = np.hstack(predicted_reaction_energies_per_batch)
 
-    print(true_activation_energies, true_reaction_energies)
-    print(test_gen.rxn_id)
-    raise KeyError
-    # determine accuracy metrics
+    return predicted_activation_energies, predicted_reaction_energies
+
+
+def evaluate(
+    predicted_activation_energies,
+    predicted_reaction_energies,
+    true_activation_energies,
+    true_reaction_energies,
+):
+    """Determine metrics based on predicted and true values.
+
+    Args:
+        predicted_activation_energies (np.array): array of predicted activation energies
+        predicted_reaction_energies (np.array): array of predicted reaction energies
+        true_activation_energies (np.array): array of recorded activation energies
+        true_reaction_energies (np.array): array of recorded reaction energies
+
+    Returns:
+        rmse_activation_energy (int): RMSE for the activation energy
+        rmse_reaction_ (np.array): array of predicted reaction energy values
+    """
     mae_activation_energy = mean_absolute_error(
         predicted_activation_energies, true_activation_energies
     )
@@ -84,8 +72,6 @@ def evaluate(test_gen, selec_batch_size, models, scalers):
     )
 
     return (
-        predicted_activation_energies,
-        predicted_reaction_energies,
         rmse_activation_energy,
         rmse_reaction_energy,
         mae_activation_energy,
@@ -94,7 +80,7 @@ def evaluate(test_gen, selec_batch_size, models, scalers):
 
 
 def write_predictions(
-    test_gen,
+    rxn_ids,
     predicted_activation_energies,
     predicted_reaction_energies,
     rxn_id_column,
@@ -103,7 +89,7 @@ def write_predictions(
     """Write predictions to a .csv file.
 
     Args:
-        test_gen (Dataloader): dataloader object for the test set
+        rxn_id (pd.DataFrame): dataframe consisting of the rxn_ids
         activation_energies_predicted (List): list of predicted activation energies
         reaction_energies_predicted (List): list of predicted reaction energies
         rxn_id_column (str): name of the rxn-id column
@@ -112,7 +98,7 @@ def write_predictions(
 
     test_predicted = pd.DataFrame(
         {
-            f"{rxn_id_column}": test_gen.rxn_id,
+            f"{rxn_id_column}": rxn_ids,
             "predicted_activation_energy": predicted_activation_energies,
             "predicted_reaction_energy": predicted_reaction_energies,
         }

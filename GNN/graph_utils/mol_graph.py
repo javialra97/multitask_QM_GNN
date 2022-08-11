@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import os
 
-
 elem_list = [
     "C",
     "O",
@@ -259,7 +258,7 @@ def _mol2graph(
         }
 
         if "none" not in selected_bond_descriptors:
-            qm_series = qm_descriptors.loc(smiles)
+            qm_series = qm_descriptors.loc[smiles]
 
             bond_index = np.expand_dims(qm_series["bond_order_matrix"], -1)
             bond_index = np.apply_along_axis(

@@ -3,35 +3,27 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from GNN.WLN.data_loading import Graph_DataLoader as dataloader
-from GNN.WLN.models import WLNRegressor as regressor
-from process_descs import predict_atom_descs, predict_reaction_descs
-from process_descs import (
-    reaction_to_reactants,
-    normalize_atom_descs,
-    normalize_reaction_descs,
-)
-from GNN.graph_utils.mol_graph import (
-    initialize_qm_descriptors,
-    initialize_reaction_descriptors,
-)
+from GNN.WLN import Graph_DataLoader as dataloader
+from GNN.WLN import WLNRegressor as regressor
+from process_descs import load_descriptors, setup_and_scale_descriptors
+from GNN.graph_utils import initialize_qm_descriptors, initialize_reaction_descriptors
 
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
 
 from utils import lr_multiply_ratio, parse_args, create_logger
-from utils import Dataset, split_data
-from utils import evaluate, write_predictions
+from utils import Dataset, split_data_cross_val
+from utils import predict_single_model, write_predictions, evaluate
 
 
 def initialize_model(args):
     """Initialize a model.
 
     Args:
-        args (Namespace): The namespace containing all the command line arguments
+        args (Namespace): the namespace containing all the command line arguments
 
     Returns:
-        model (WLNRegressor): An initialized model
+        model (GNN.WLN.WLNRegressor): an initialized model
     """
     model = regressor(
         args.feature,
@@ -51,12 +43,12 @@ def load_all_models(args, fold_dir, dataloader):
     """Load an ensemble of pre-trained models.
 
     Args:
-        args (Namespace): The namespace containing all the command line arguments
-        fold_dir (os.Path): Path of the directory for each fold
-        dataloader (Dataloader): A dataloader object so that the models can be build
+        args (Namespace): the namespace containing all the command line arguments
+        fold_dir (os.Path): path of the directory for each fold
+        dataloader (GNN.WLN.Dataloader): a dataloader object so that the models can be build
 
     Returns:
-        all_models (List[WLNRegressor]): List of loaded models
+        all_models (List[GNN.WLN.WLNRegressor]): list of loaded models
     """
     all_models = []
     for j in range(args.ensemble_size):
@@ -72,34 +64,11 @@ def load_all_models(args, fold_dir, dataloader):
     return all_models
 
 
+# initialize
 args = parse_args(cross_val=True)
-
 logger = create_logger(name=args.model_dir)
 
-if (
-    "none" not in args.select_atom_descriptors
-    or "none" not in args.select_bond_descriptors
-):
-    if args.qm_pred:
-        logger.info(f"Predicting atom-level descriptors")
-        qmdf = predict_atom_descs(args, normalize=False)
-    else:
-        qmdf = pd.read_pickle(args.atom_desc_path)
-    qmdf.to_csv(os.path.join(args.model_dir, "atom_descriptors.csv"))
-    logger.info(
-        f"The considered atom-level descriptors are: {args.select_atom_descriptors}"
-    )
-    logger.info(f"The considered bond descriptors are: {args.select_bond_descriptors}")
-if "none" not in args.select_reaction_descriptors:
-    if args.qm_pred:
-        raise NotImplementedError
-    else:
-        df_reaction_desc = pd.read_pickle(args.reaction_desc_path)
-        df_reaction_desc.to_csv(os.path.join(args.model_dir, "reaction_descriptors"))
-        logger.info(
-            f"The considered reaction descriptors are: {args.select_reaction_descriptors}"
-        )
-
+# load data set
 if args.data_path is not None:
     df = pd.read_csv(args.data_path, index_col=0)
 # selective sampling
@@ -107,7 +76,19 @@ elif args.train_valid_set_path is not None and args.test_set_path is not None:
     df = pd.read_csv(args.train_valid_set_path, index_col=0)
 else:
     raise Exception("Paths are not provided correctly!")
+
 df = df.sample(frac=1, random_state=args.random_state)
+
+# load descriptors
+qmdf, df_reaction_desc = load_descriptors(args)
+if isinstance(qmdf, pd.DataFrame):
+    logger.info(
+        f"The considered atom-level descriptors are: {args.select_atom_descriptors}"
+    )
+if isinstance(df_reaction_desc, pd.DataFrame):
+    logger.info(
+        f"The considered reaction descriptors are: {args.select_reaction_descriptors}"
+    )
 
 # split df into k_fold groups
 k_fold_arange = np.linspace(0, len(df), args.k_fold + 1).astype(int)
@@ -119,14 +100,20 @@ mae_activation_energy_list, mae_reaction_energy_list = [], []
 # loop over all the folds
 for i in range(args.k_fold):
     logger.info(f"Training the {i}th iteration...")
+
     # make a directory to store model files
     fold_dir = os.path.join(args.model_dir, f"fold_{i}")
     os.makedirs(fold_dir, exist_ok=True)
-    all_scalers = []
+
+    # initialize list to store predictions for each model in the ensemble
+    predicted_activation_energies_ind = []
+    predicted_reaction_energies_ind = []
+
     # within a fold, loop over the ensemble size (default -> 1)
     for j in range(args.ensemble_size):
-        logger.info(f"Training of model {j} started...")
-        train, valid, test = split_data(
+        if args.ensemble_size < 1:
+            logger.info(f"Training of model {j} started...")
+        train, valid, test = split_data_cross_val(
             df,
             k_fold_arange,
             i,
@@ -141,28 +128,27 @@ for i in range(args.k_fold):
         )
 
         logger.info(
-            f" Size train set: {len(train)} - Size validation set: {len(valid)} - Size test set: {len(test)}"
+            f" Size train set: {len(train)} - size validation set: {len(valid)} - size test set: {len(test)}"
         )
 
         # process training and validation data
         train_dataset = Dataset(train, args)
-        valid_dataset = Dataset(valid, args, train_dataset.scalers)
+        valid_dataset = Dataset(valid, args, train_dataset.output_scalers)
 
         # set up the atom- and reaction-level descriptors
-        if (
-            "none" not in args.select_atom_descriptors
-            or "none" not in args.select_bond_descriptors
-        ):
-            train_reactants = reaction_to_reactants(train["rxn_smiles"].tolist())
-            qmdf_tmp, _ = normalize_atom_descs(
-                qmdf.copy(), train_smiles=train_reactants
+        if isinstance(qmdf, pd.DataFrame) or isinstance(df_reaction_desc, pd.DataFrame):
+            (
+                qmdf_normalized,
+                df_reaction_desc_normalized,
+                atom_scalers,
+                reaction_scalers,
+            ) = setup_and_scale_descriptors(
+                qmdf, df_reaction_desc, train_dataset.rxn_smiles, i
             )
-            initialize_qm_descriptors(df=qmdf_tmp)
-        if "none" not in args.select_reaction_descriptors:
-            df_reaction_desc_tmp, _ = normalize_reaction_descs(
-                df_reaction_desc.copy(), train_smiles=train["rxn_smiles"].tolist()
-            )
-            initialize_reaction_descriptors(df=df_reaction_desc_tmp)
+            if isinstance(qmdf_normalized, pd.DataFrame):
+                initialize_qm_descriptors(df=qmdf_normalized)
+            if isinstance(df_reaction_desc_normalized, pd.DataFrame):
+                initialize_reaction_descriptors(df=df_reaction_desc_normalized)
 
         # set up dataloaders for training and validation sets
         train_gen = dataloader(
@@ -193,9 +179,7 @@ for i in range(args.k_fold):
             },
         )
 
-        save_name = os.path.join(
-            os.path.join(args.model_dir, f"fold_{i}"), f"best_model_{j}.hdf5"
-        )
+        save_name = os.path.join(fold_dir, f"best_model_{j}.hdf5")
         checkpoint = ModelCheckpoint(
             save_name, monitor="val_loss", save_best_only=True, save_weights_only=True
         )
@@ -217,49 +201,61 @@ for i in range(args.k_fold):
             workers=args.workers,
         )
 
-        with open(
-            os.path.join(
-                os.path.join(args.model_dir, f"fold_{i}"), f"history_{i}.pickle"
-            ),
-            "wb",
-        ) as hist_pickle:
+        with open(os.path.join(fold_dir, f"history_{i}.pickle"), "wb") as hist_pickle:
             pickle.dump(hist.history, hist_pickle)
 
-        all_scalers.append(train_dataset.scalers)
+        # set up test dataset and dataloader; use output_scalers from train data
+        test_dataset = Dataset(test, args, train_dataset.output_scalers)
 
-    # process testing data
-    test_dataset = Dataset(test, args, train_dataset.scalers)
+        test_gen = dataloader(
+            test_dataset,
+            args.selec_batch_size,
+            args.select_atom_descriptors,
+            args.select_bond_descriptors,
+            args.select_reaction_descriptors,
+            shuffle=False,
+            predict=True,
+        )
 
-    # set up dataloader for testing data
-    test_gen = dataloader(
-        test_dataset,
-        args.selec_batch_size,
-        args.select_atom_descriptors,
-        args.select_bond_descriptors,
-        args.select_reaction_descriptors,
-        shuffle=False,
+        # get predictions on test set
+        (
+            predicted_activation_energies_i,
+            predicted_reaction_energies_i,
+        ) = predict_single_model(
+            test_gen, args.selec_batch_size, model, test_dataset.output_scalers
+        )
+
+        predicted_activation_energies_ind.append(predicted_activation_energies_i)
+        predicted_reaction_energies_ind.append(predicted_reaction_energies_i)
+
+    # determine ensemble predictions
+    predicted_activation_energies = np.sum(
+        predicted_activation_energies_ind, axis=0
+    ) / len(predicted_activation_energies_ind)
+    predicted_reaction_energies = np.sum(predicted_reaction_energies_ind, axis=0) / len(
+        predicted_activation_energies_ind
     )
-    test_steps = np.ceil(len(test_dataset) / args.selec_batch_size).astype(int)
 
-    # load the models
-    all_models = load_all_models(args, fold_dir, train_gen)
-
-    # run model for testing set, save predictions and store metrics
-    (
-        predicted_activation_energies,
-        predicted_reaction_energies,
-        rmse_activation_energy,
-        rmse_reaction_energy,
-        mae_activation_energy,
-        mae_reaction_energy,
-    ) = evaluate(test_gen, args.selec_batch_size, all_models, all_scalers)
-
+    # write predictions for fold i to csv file
     write_predictions(
-        test_gen,
+        test_dataset.rxn_id,
         predicted_activation_energies,
         predicted_reaction_energies,
         args.rxn_id_column,
         os.path.join(args.model_dir, f"test_predicted_{i}.csv"),
+    )
+
+    # compute and store metrics
+    (
+        rmse_activation_energy,
+        rmse_reaction_energy,
+        mae_activation_energy,
+        mae_reaction_energy,
+    ) = evaluate(
+        predicted_activation_energies,
+        predicted_reaction_energies,
+        test_dataset.activation_energy,
+        test_dataset.reaction_energy,
     )
 
     rmse_activation_energy_list.append(rmse_activation_energy)

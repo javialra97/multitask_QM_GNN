@@ -24,8 +24,8 @@ class Graph_DataLoader(Sequence):
         shuffle=True,
         predict=False,
     ):
-        self.smiles = dataset.smiles
-        self.product = dataset.product
+        self.smiles = dataset.reactant_smiles
+        self.product = dataset.product_smiles
         self.rxn_id = dataset.rxn_id
         self.activation_energy = dataset.activation_energy_scaled
         self.reaction_energy = dataset.reaction_energy_scaled

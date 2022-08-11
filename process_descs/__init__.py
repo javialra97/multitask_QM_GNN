@@ -1,6 +1,3 @@
-from .post_process import normalize_atom_descs, normalize_reaction_descs
-from .predict_descs import (
-    predict_atom_descs,
-    predict_reaction_descs,
-    reaction_to_reactants,
-)
+from .process_descs import load_descriptors, setup_and_scale_descriptors
+from .process_descs import normalize_atom_descs, normalize_reaction_descs
+from .process_descs import predict_atom_descs, predict_reaction_descs
