@@ -14,3 +14,4 @@ environment.yml
 trained_model/
 GNN/.DS_Store
 scripts/
+bayesian_opt_all_desc/

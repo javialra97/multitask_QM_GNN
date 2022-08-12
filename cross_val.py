@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 
 from GNN.WLN import construct_input_pipeline
-from GNN.WLN import Graph_DataLoader as dataloader
 from GNN.WLN import WLNRegressor as regressor
 from process_descs import load_descriptors, setup_and_scale_descriptors
 from GNN.graph_utils import initialize_qm_descriptors, initialize_reaction_descriptors
@@ -117,7 +116,7 @@ for i in range(args.k_fold):
                 initialize_reaction_descriptors(df=df_reaction_desc_normalized)
 
         # set up input pipeline for training and validation sets
-        pipeline_train = construct_input_pipeline(
+        pipeline_train, _ = construct_input_pipeline(
             train_dataset,
             args.selec_batch_size,
             args.select_atom_descriptors,
@@ -125,7 +124,7 @@ for i in range(args.k_fold):
             args.select_reaction_descriptors,
         )
 
-        pipeline_valid = construct_input_pipeline(
+        pipeline_valid, _ = construct_input_pipeline(
             valid_dataset,
             args.selec_batch_size,
             args.select_atom_descriptors,
@@ -184,7 +183,7 @@ for i in range(args.k_fold):
             args.target_column2,
         )
 
-        pipeline_test = construct_input_pipeline(
+        pipeline_test, _ = construct_input_pipeline(
             test_dataset,
             args.selec_batch_size,
             args.select_atom_descriptors,

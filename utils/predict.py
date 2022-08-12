@@ -4,12 +4,13 @@ from tqdm import tqdm
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
-def predict_single_model(test_gen, selec_batch_size, model, output_scalers):
+def predict_single_model(test_gen, len_test_set, batch_size, model, output_scalers):
     """Predicts output for a single model.
 
     Args:
-        test_gen (GNN.WLN.Dataloader): a dataloader object that generates input
-        selec_batch_size (int): the batch size
+        test_gen (tf.data.Dataset): an input pipeline for the test set
+        len_test_set (int): the length of the test set
+        batch_size (int): the batch size
         model (GNN.WLN.WLNRegressor): the GNN model
         output_scalers (List[StandardScalers]): scalers to inverse transform output from GNN
 
@@ -20,7 +21,7 @@ def predict_single_model(test_gen, selec_batch_size, model, output_scalers):
     predicted_activation_energies_per_batch = []
     predicted_reaction_energies_per_batch = []
 
-    for x in tqdm(test_gen, total=int(len(test_gen.smiles) / selec_batch_size)):
+    for x in tqdm(test_gen, total=int(len_test_set / batch_size)):
         out = model.predict_on_batch(x)
         predicted_activation_energies_batch = (
             output_scalers[0].inverse_transform(out["activation_energy"]).reshape(-1)
