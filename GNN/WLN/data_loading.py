@@ -163,11 +163,11 @@ def construct_input_pipeline(
                 ),
             )
 
-    tf_dataset.shuffle(len(dataset))
-
     if predict:
         return tf_dataset.cache(), dataloader[0]
     else:
+        if shuffle:
+            tf_dataset.shuffle(len(dataset))
         return tf_dataset.cache(), dataloader[0][0]
 
 
