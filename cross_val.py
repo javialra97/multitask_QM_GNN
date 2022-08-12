@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from GNN.WLN import construct_input_pipeline
+from GNN.WLN import Graph_DataLoader as dataloader
 from GNN.WLN import WLNRegressor as regressor
 from process_descs import load_descriptors, setup_and_scale_descriptors
 from GNN.graph_utils import initialize_qm_descriptors, initialize_reaction_descriptors
@@ -198,7 +199,7 @@ for i in range(args.k_fold):
             predicted_activation_energies_i,
             predicted_reaction_energies_i,
         ) = predict_single_model(
-            pipeline_test, args.selec_batch_size, model, test_dataset.output_scalers
+            pipeline_test, len(test_dataset), args.selec_batch_size, model, test_dataset.output_scalers
         )
 
         predicted_activation_energies_ind.append(predicted_activation_energies_i)
@@ -208,6 +209,7 @@ for i in range(args.k_fold):
     predicted_activation_energies = np.sum(
         predicted_activation_energies_ind, axis=0
     ) / len(predicted_activation_energies_ind)
+
     predicted_reaction_energies = np.sum(predicted_reaction_energies_ind, axis=0) / len(
         predicted_activation_energies_ind
     )
