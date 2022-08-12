@@ -29,15 +29,16 @@ def construct_input_pipeline(
 
     Args:
         dataset (utils.Dataset): a dataset object
-        batch_size (int): the number of 
-        selected_atom_descriptors (_type_): _description_
-        selected_bond_descriptors (_type_): _description_
-        selected_reaction_descriptors (_type_): _description_
-        shuffle (bool, optional): _description_. Defaults to True.
-        predict (bool, optional): _description_. Defaults to False.
+        batch_size (int): the batch size 
+        selected_atom_descriptors (List[str]): the selected atom descriptors
+        selected_bond_descriptors (List[str]): the selected bond descriptors
+        selected_reaction_descriptors (List[str]): the selected reaction descriptors
+        shuffle (bool, optional): whether the data should be shuffled. Defaults to True.
+        predict (bool, optional): whether this is a prediction. Defaults to False.
 
     Returns:
-        _type_: _description_
+        tf_dataset (tf.data.Dataset) : the input pipeline 
+        dataloader[0] (Tuple[tf.Tensor]): example input to set up loaded model
     """
 
     dataloader = Graph_DataLoader(
@@ -103,7 +104,7 @@ def construct_input_pipeline(
                         tf.TensorSpec(shape=(None, None), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None), dtype=tf.float32),
                     ),
-            )
+                )
     else:
         if "none" in selected_reaction_descriptors:
             tf_dataset = tf.data.Dataset.from_generator(
@@ -162,7 +163,12 @@ def construct_input_pipeline(
                 ),
             )
 
-    return tf_dataset.cache()
+    tf_dataset.shuffle(len(dataset))
+
+    if predict:
+        return tf_dataset.cache(), dataloader[0]
+    else:
+        return tf_dataset.cache(), dataloader[0][0]
 
 
 class Graph_DataLoader(Sequence):
