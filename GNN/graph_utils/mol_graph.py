@@ -2,6 +2,7 @@ import rdkit.Chem as Chem
 import numpy as np
 import pandas as pd
 import os
+import tensorflow as tf
 
 elem_list = [
     "C",

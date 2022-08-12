@@ -9,29 +9,33 @@ class Dataset:
     def __init__(
         self,
         df,
-        args,
         output_scalers=None,
-        atom_desc_scalers=None,
-        reaction_desc_scalers=None,
+        rxn_id_column="rxn_id",
+        rxn_smiles_column="rxn_smiles",
+        target_column1="DG_TS",
+        target_column2="G_r",
     ):
         """
         Args:
             df (pd.DataFrame): dataframe containing rxn_id, rxn_smiles and targets
-            args: namespace defined at onset of program
-            scalers (List[sklearn.preprocessing.StandardScaler]):
+            output_scalers (List[sklearn.preprocessing.StandardScaler]):
                 activation_energy and reaction_energy scaler
+            rxn_id_column (str): name of the rxn-id column
+            rxn_smiles_column (str): name of the rxn-smiles column
+            target_column1 (str): name of the first target column
+            target_column2 (str): name of the second target column
         """
-        self.rxn_id = df[f"{args.rxn_id_column}"].values
-        self.rxn_smiles = df[f"{args.rxn_smiles_column}"].values
+        self.rxn_id = df[f"{rxn_id_column}"].values
+        self.rxn_smiles = df[f"{rxn_smiles_column}"].values
         self.reactant_smiles = (
-            df[f"{args.rxn_smiles_column}"].str.split(">", expand=True)[0].values
+            df[f"{rxn_smiles_column}"].str.split(">", expand=True)[0].values
         )
         self.product_smiles = (
-            df[f"{args.rxn_smiles_column}"].str.split(">", expand=True)[2].values
+            df[f"{rxn_smiles_column}"].str.split(">", expand=True)[2].values
         )
 
-        self.activation_energy = df[f"{args.target_column1}"].values
-        self.reaction_energy = df[f"{args.target_column2}"].values
+        self.activation_energy = df[f"{target_column1}"].values
+        self.reaction_energy = df[f"{target_column2}"].values
 
         if output_scalers != None:
             self.output_scalers = output_scalers
@@ -47,11 +51,6 @@ class Dataset:
         self.reaction_energy_scaled = self.output_scalers[1].transform(
             self.reaction_energy.reshape(-1, 1)
         )
-
-        if atom_desc_scalers != None:
-            self.atom_desc_scalers = atom_desc_scalers
-        elif reaction_desc_scalers != None:
-            self.reaction_desc_scalers = reaction_desc_scalers
 
     def __len__(self):
         return len(self.rxn_smiles)

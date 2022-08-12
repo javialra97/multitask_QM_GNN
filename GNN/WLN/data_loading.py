@@ -1,6 +1,5 @@
-# import tensorflow as tf
+import tensorflow as tf
 import numpy as np
-import pandas as pd
 from tensorflow.keras.utils import Sequence
 from random import shuffle
 from ..graph_utils.mol_graph import (
@@ -11,6 +10,111 @@ from ..graph_utils.mol_graph import (
     get_mask,
 )
 from ..graph_utils.ioutils_direct import binary_features_batch
+
+
+def construct_input_pipeline(
+    dataset,
+    batch_size,
+    selected_atom_descriptors,
+    selected_bond_descriptors,
+    selected_reaction_descriptors,
+    shuffle=True,
+    predict=False,
+):
+    """Generates a tf.data.Dataset object based on a graph_dataloader,
+    which can be used as input for training/evaluation of the GNN model.
+
+    Note: This is a hack to get around the issues related to having a 
+    Graph_dataloader in combination with multiprocessing in tensorflow.
+
+    Args:
+        dataset (utils.Dataset): a dataset object
+        batch_size (int): the number of 
+        selected_atom_descriptors (_type_): _description_
+        selected_bond_descriptors (_type_): _description_
+        selected_reaction_descriptors (_type_): _description_
+        shuffle (bool, optional): _description_. Defaults to True.
+        predict (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
+
+    dataloader = Graph_DataLoader(
+        dataset,
+        batch_size,
+        selected_atom_descriptors,
+        selected_bond_descriptors,
+        selected_reaction_descriptors,
+        shuffle=shuffle,
+        predict=predict,
+    )
+
+    def gen_data():
+        for i in range(len(dataloader)):
+            yield dataloader.getitem(i)
+
+    # Since the last dimension of the input to a dense layer needs to be defined,
+    # models with 'reaction descriptors' need to be treated separately since a dense layer
+    # directly follows its concatenation in the GNN model.
+    if "none" in selected_reaction_descriptors:
+        tf_dataset = tf.data.Dataset.from_generator(
+            gen_data,
+            output_signature=(
+                (
+                    tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, None, 11), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                ),
+                {
+                    "activation_energy": tf.TensorSpec(shape=(None, 1), dtype=tf.float32),
+                    "reaction_energy": tf.TensorSpec(shape=(None, 1), dtype=tf.float32),
+                },
+            ),
+        )
+    else:
+        tf_dataset = tf.data.Dataset.from_generator(
+            gen_data,
+            output_signature=(
+                (
+                    tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, None, 11), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, len(selected_reaction_descriptors)), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None), dtype=tf.float32),
+                ),
+                {
+                    "activation_energy": tf.TensorSpec(shape=(None, 1), dtype=tf.float32),
+                    "reaction_energy": tf.TensorSpec(shape=(None, 1), dtype=tf.float32),
+                },
+            ),
+        )
+
+    return tf_dataset.cache()
 
 
 class Graph_DataLoader(Sequence):
@@ -73,6 +177,9 @@ class Graph_DataLoader(Sequence):
         else:
             x = self.__data_generation(smiles_tmp, product_tmp, rxn_id_tmp)
             return x
+
+    def getitem(self, index):
+        return self.__getitem__(index)
 
     def on_epoch_end(self):
         if self.shuffle == True:

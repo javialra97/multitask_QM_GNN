@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from GNN.WLN import Graph_DataLoader as dataloader
+from GNN.WLN import construct_input_pipeline
 from GNN.WLN import WLNRegressor as regressor
 from process_descs import load_descriptors, setup_and_scale_descriptors
 from GNN.graph_utils import initialize_qm_descriptors, initialize_reaction_descriptors
@@ -14,55 +14,6 @@ from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from utils import lr_multiply_ratio, parse_args, create_logger
 from utils import Dataset, split_data_cross_val
 from utils import predict_single_model, write_predictions, evaluate
-
-
-def initialize_model(args):
-    """Initialize a model.
-
-    Args:
-        args (Namespace): the namespace containing all the command line arguments
-
-    Returns:
-        model (GNN.WLN.WLNRegressor): an initialized model
-    """
-    model = regressor(
-        args.feature,
-        args.depth,
-        args.select_atom_descriptors,
-        args.select_reaction_descriptors,
-        args.w_atom,
-        args.w_reaction,
-        args.depth_mol_ffn,
-        args.hidden_size_multiplier,
-    )
-
-    return model
-
-
-def load_all_models(args, fold_dir, dataloader):
-    """Load an ensemble of pre-trained models.
-
-    Args:
-        args (Namespace): the namespace containing all the command line arguments
-        fold_dir (os.Path): path of the directory for each fold
-        dataloader (GNN.WLN.Dataloader): a dataloader object so that the models can be build
-
-    Returns:
-        all_models (List[GNN.WLN.WLNRegressor]): list of loaded models
-    """
-    all_models = []
-    for j in range(args.ensemble_size):
-        # set up the model
-        model = initialize_model(args)
-        x_build = dataloader[0][0]
-        model.predict_on_batch(x_build)
-        # load weights
-        save_name = os.path.join(fold_dir, f"best_model_{j}.hdf5")
-        model.load_weights(save_name)
-        all_models.append(model)
-
-    return all_models
-
 
 # initialize
 args = parse_args(cross_val=True)
@@ -87,7 +38,7 @@ if isinstance(qmdf, pd.DataFrame):
     )
 if isinstance(df_reaction_desc, pd.DataFrame):
     logger.info(
-        f"The considered reaction descriptors are: {args.select_reaction_descriptors}"
+        f"The considered reaction-level descriptors are: {args.select_reaction_descriptors}"
     )
 
 # split df into k_fold groups
@@ -111,7 +62,7 @@ for i in range(args.k_fold):
 
     # within a fold, loop over the ensemble size (default -> 1)
     for j in range(args.ensemble_size):
-        if args.ensemble_size < 1:
+        if args.ensemble_size > 1:
             logger.info(f"Training of model {j} started...")
         train, valid, test = split_data_cross_val(
             df,
@@ -132,8 +83,22 @@ for i in range(args.k_fold):
         )
 
         # process training and validation data
-        train_dataset = Dataset(train, args)
-        valid_dataset = Dataset(valid, args, train_dataset.output_scalers)
+        train_dataset = Dataset(
+            train,
+            None,
+            args.rxn_id_column,
+            args.rxn_smiles_column,
+            args.target_column1,
+            args.target_column2,
+        )
+        valid_dataset = Dataset(
+            valid,
+            train_dataset.output_scalers,
+            args.rxn_id_column,
+            args.rxn_smiles_column,
+            args.target_column1,
+            args.target_column2,
+        )
 
         # set up the atom- and reaction-level descriptors
         if isinstance(qmdf, pd.DataFrame) or isinstance(df_reaction_desc, pd.DataFrame):
@@ -150,26 +115,34 @@ for i in range(args.k_fold):
             if isinstance(df_reaction_desc_normalized, pd.DataFrame):
                 initialize_reaction_descriptors(df=df_reaction_desc_normalized)
 
-        # set up dataloaders for training and validation sets
-        train_gen = dataloader(
+        # set up input pipeline for training and validation sets
+        pipeline_train = construct_input_pipeline(
             train_dataset,
             args.selec_batch_size,
             args.select_atom_descriptors,
             args.select_bond_descriptors,
             args.select_reaction_descriptors,
         )
-        train_steps = np.ceil(len(train_dataset) / args.selec_batch_size).astype(int)
-        valid_gen = dataloader(
+
+        pipeline_valid = construct_input_pipeline(
             valid_dataset,
             args.selec_batch_size,
             args.select_atom_descriptors,
             args.select_bond_descriptors,
             args.select_reaction_descriptors,
         )
-        valid_steps = np.ceil(len(valid_dataset) / args.selec_batch_size).astype(int)
 
         # set up tensorflow model
-        model = initialize_model(args)
+        model = regressor(
+            args.feature,
+            args.depth,
+            args.select_atom_descriptors,
+            args.select_reaction_descriptors,
+            args.w_atom,
+            args.w_reaction,
+            args.depth_mol_ffn,
+            args.hidden_size_multiplier,
+        )
         opt = tf.keras.optimizers.Adam(learning_rate=args.ini_lr, clipnorm=5)
         model.compile(
             optimizer=opt,
@@ -191,23 +164,26 @@ for i in range(args.k_fold):
 
         # run training and save weights
         hist = model.fit(
-            train_gen,
-            steps_per_epoch=train_steps,
+            pipeline_train,
             epochs=args.selec_epochs,
-            validation_data=valid_gen,
-            validation_steps=valid_steps,
+            validation_data=pipeline_valid,
             callbacks=callbacks,
-            use_multiprocessing=True,
-            workers=args.workers,
         )
 
         with open(os.path.join(fold_dir, f"history_{i}.pickle"), "wb") as hist_pickle:
             pickle.dump(hist.history, hist_pickle)
 
-        # set up test dataset and dataloader; use output_scalers from train data
-        test_dataset = Dataset(test, args, train_dataset.output_scalers)
+        # set up test dataset and input_pipeline; use output_scalers from train data
+        test_dataset = Dataset(
+            test,
+            train_dataset.output_scalers,
+            args.rxn_id_column,
+            args.rxn_smiles_column,
+            args.target_column1,
+            args.target_column2,
+        )
 
-        test_gen = dataloader(
+        pipeline_test = construct_input_pipeline(
             test_dataset,
             args.selec_batch_size,
             args.select_atom_descriptors,
@@ -222,7 +198,7 @@ for i in range(args.k_fold):
             predicted_activation_energies_i,
             predicted_reaction_energies_i,
         ) = predict_single_model(
-            test_gen, args.selec_batch_size, model, test_dataset.output_scalers
+            pipeline_test, args.selec_batch_size, model, test_dataset.output_scalers
         )
 
         predicted_activation_energies_ind.append(predicted_activation_energies_i)
