@@ -198,7 +198,11 @@ for i in range(args.k_fold):
             predicted_activation_energies_i,
             predicted_reaction_energies_i,
         ) = predict_single_model(
-            pipeline_test, len(test_dataset), args.selec_batch_size, model, test_dataset.output_scalers
+            pipeline_test,
+            len(test_dataset),
+            args.selec_batch_size,
+            model,
+            test_dataset.output_scalers,
         )
 
         predicted_activation_energies_ind.append(predicted_activation_energies_i)

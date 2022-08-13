@@ -2,7 +2,7 @@ import os
 import pickle
 import argparse
 
-from GNN.WLN.data_loading import Graph_DataLoader as dataloader
+from GNN.WLN.data_loading import construct_input_pipeline
 from GNN.WLN.models import WLNRegressor as regressor
 
 from GNN.graph_utils.mol_graph import (
@@ -74,6 +74,7 @@ def parse_command_line_args():
 def objective(
     args0,
     df_reactions,
+    rxn_id_column,
     rxn_smiles_column,
     target_column1,
     target_column2,
@@ -99,11 +100,29 @@ def objective(
         # split data for fold
         if df_reactions is not None:
             valid = df_reactions[k_fold_arange[i] : k_fold_arange[i + 1]]
-            train = df_reactions[~df_reactions[f"{rxn_smiles_column}"].isin(valid[f"{rxn_smiles_column}"])]
+            train = df_reactions[
+                ~df_reactions[f"{rxn_smiles_column}"].isin(
+                    valid[f"{rxn_smiles_column}"]
+                )
+            ]
 
         # process training data
-        train_dataset = Dataset(train, args)
-        valid_dataset = Dataset(valid, args, train_dataset.output_scalers)
+        train_dataset = Dataset(
+            train,
+            None,
+            rxn_id_column,
+            rxn_smiles_column,
+            target_column1,
+            target_column2,
+        )
+        valid_dataset = Dataset(
+            valid,
+            train_dataset.output_scalers,
+            rxn_id_column,
+            rxn_smiles_column,
+            target_column1,
+            target_column2,
+        )
 
         # set up the atom- and reaction-level descriptors
         if isinstance(qmdf, pd.DataFrame) or isinstance(df_reaction_desc, pd.DataFrame):
@@ -120,23 +139,21 @@ def objective(
             if isinstance(df_reaction_desc_normalized, pd.DataFrame):
                 initialize_reaction_descriptors(df=df_reaction_desc_normalized)
 
-        # set up dataloaders for training and validation sets
-        train_gen = dataloader(
+        # set up input pipeline for training and validation sets
+        pipeline_train, _ = construct_input_pipeline(
             train_dataset,
-            args.selec_batch_size,
-            args.select_atom_descriptors,
-            args.select_bond_descriptors,
-            args.select_reaction_descriptors,
+            selec_batch_size,
+            select_atom_descriptors,
+            select_bond_descriptors,
+            select_reaction_descriptors,
         )
-        train_steps = np.ceil(len(train_dataset) / args.selec_batch_size).astype(int)
-        valid_gen = dataloader(
+        pipeline_valid, _ = construct_input_pipeline(
             valid_dataset,
-            args.selec_batch_size,
-            args.select_atom_descriptors,
-            args.select_bond_descriptors,
-            args.select_reaction_descriptors,
+            selec_batch_size,
+            select_atom_descriptors,
+            select_bond_descriptors,
+            select_reaction_descriptors,
         )
-        valid_steps = np.ceil(len(valid_dataset) / args.selec_batch_size).astype(int)
 
         # set up tensorflow model
         model = regressor(
@@ -172,15 +189,11 @@ def objective(
         # run training and save weights
         print(f"training the {i}th iteration")
         hist = model.fit(
-            train_gen,
-            steps_per_epoch=train_steps,
+            pipeline_train,
             epochs=100,
-            validation_data=valid_gen,
-            validation_steps=valid_steps,
-            callbacks=callbacks,
-            use_multiprocessing=True,
-            workers=6,
             verbose=0,
+            validation_data=pipeline_valid,
+            callbacks=callbacks,
         )
 
         with open(os.path.join(model_dir, f"history_{i}.pickle"), "wb") as hist_pickle:
@@ -188,22 +201,31 @@ def objective(
 
         model.load_weights(save_name)
 
-         # get best predictions on validation set
+        # get best predictions on validation set
+        pipeline_predict, _ = construct_input_pipeline(
+            valid_dataset,
+            selec_batch_size,
+            select_atom_descriptors,
+            select_bond_descriptors,
+            select_reaction_descriptors,
+            shuffle=False,
+            predict=True,
+        )
+
         (
             predicted_activation_energies,
             predicted_reaction_energies,
         ) = predict_single_model(
-            valid_gen, args.selec_batch_size, model, valid_dataset.output_scalers
+            pipeline_predict,
+            len(valid_dataset),
+            selec_batch_size,
+            model,
+            valid_dataset.output_scalers,
         )
 
-        (
-            rmse_activation_energy,
-            rmse_reaction_energy,
-            _,
-            _,
-        ) = evaluate(
+        (rmse_activation_energy, rmse_reaction_energy, _, _,) = evaluate(
             predicted_activation_energies,
-         predicted_reaction_energies,
+            predicted_reaction_energies,
             valid_dataset.activation_energy,
             valid_dataset.reaction_energy,
         )
@@ -267,6 +289,7 @@ def gnn_bayesian(
     fmin_objective = partial(
         objective,
         df_reactions=df,
+        rxn_id_column="rxn_id",
         rxn_smiles_column="rxn_smiles",
         target_column1="DG_TS",
         target_column2="G_r",

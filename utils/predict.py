@@ -18,6 +18,7 @@ def predict_single_model(test_gen, len_test_set, batch_size, model, output_scale
         predicted_activation_energy (np.array): array of predicted activation energy values
         predicted_reaction_energy (np.array): array of predicted reaction energy values
     """
+    # TODO: this can probably be made more efficient by simply using model.predict(test_dataset)
     predicted_activation_energies_per_batch = []
     predicted_reaction_energies_per_batch = []
 
