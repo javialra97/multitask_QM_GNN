@@ -2,28 +2,30 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+import tensorflow as tf
 
 
-def predict_single_model(test_gen, len_test_set, batch_size, model, output_scalers):
+def predict_single_model(pipeline_test, model, output_scalers, len_test_set, batch_size=10):
     """Predicts output for a single model.
 
     Args:
-        test_gen (tf.data.Dataset): an input pipeline for the test set
-        len_test_set (int): the length of the test set
-        batch_size (int): the batch size
+        test_gen (GNN.WLN.Dataloader): a dataloader object that generates input
         model (GNN.WLN.WLNRegressor): the GNN model
         output_scalers (List[StandardScalers]): scalers to inverse transform output from GNN
+        len_test_set (int): the length of the test set on which a prediction is being made
+        batch_size (int): the batch size
 
     Returns:
         predicted_activation_energy (np.array): array of predicted activation energy values
         predicted_reaction_energy (np.array): array of predicted reaction energy values
     """
-    # TODO: this can probably be made more efficient by simply using model.predict(test_dataset)
+
     predicted_activation_energies_per_batch = []
     predicted_reaction_energies_per_batch = []
 
-    for x in tqdm(test_gen, total=int(len_test_set / batch_size)):
+    for x in tqdm(pipeline_test, total=int(len_test_set / batch_size)):
         out = model.predict_on_batch(x)
+
         predicted_activation_energies_batch = (
             output_scalers[0].inverse_transform(out["activation_energy"]).reshape(-1)
         )

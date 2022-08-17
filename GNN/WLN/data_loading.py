@@ -55,8 +55,6 @@ def construct_input_pipeline(
         for i in range(len(dataloader)):
             yield dataloader.getitem(i)
 
-    # Output signature is different for when predicting (no 'y')!
-    #
     # Since the last dimension of the input to a dense layer needs to be defined,
     # models with 'reaction descriptors' need to be treated separately since a dense layer
     # directly follows its concatenation in the GNN model.
@@ -106,8 +104,8 @@ def construct_input_pipeline(
                     tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None), dtype=tf.float32),
-                ),
-            )
+                    ),
+                )
     else:
         if "none" in selected_reaction_descriptors:
             tf_dataset = tf.data.Dataset.from_generator(
@@ -178,7 +176,7 @@ def construct_input_pipeline(
             )
 
     if predict:
-        return tf_dataset.cache(), dataloader[0]
+        return tf_dataset.prefetch(100), dataloader[0]
     else:
         if shuffle:
             tf_dataset.shuffle(len(dataset))

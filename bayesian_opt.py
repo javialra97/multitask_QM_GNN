@@ -217,10 +217,10 @@ def objective(
             predicted_reaction_energies,
         ) = predict_single_model(
             pipeline_predict,
+            model, 
+            valid_dataset.output_scalers,
             len(valid_dataset),
             selec_batch_size,
-            model,
-            valid_dataset.output_scalers,
         )
 
         (rmse_activation_energy, rmse_reaction_energy, _, _,) = evaluate(

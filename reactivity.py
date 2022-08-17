@@ -251,11 +251,11 @@ for i in range(args.ensemble_size):
             predicted_activation_energies_i,
             predicted_reaction_energies_i,
         ) = predict_single_model(
-            pipeline_train,
+            pipeline_test, 
+            model, 
+            test_dataset.output_scalers,
             len(test_dataset),
             args.selec_batch_size,
-            model,
-            test_dataset.output_scalers,
         )
         predicted_activation_energies_ind.append(predicted_activation_energies_i)
         predicted_reaction_energies_ind.append(predicted_reaction_energies_i)
@@ -275,5 +275,5 @@ if args.predict:
         predicted_activation_energies,
         predicted_reaction_energies,
         args.rxn_id_column,
-        os.path.join(args.model_dir, f"test_predicted_{i}.csv"),
+        os.path.join(args.model_dir, f"test_predicted.csv"),
     )
