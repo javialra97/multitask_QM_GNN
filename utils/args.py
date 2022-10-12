@@ -106,12 +106,6 @@ def parse_args(cross_val=False):
         help="restart the training using the saved the checkpoint file",
     )
     parser.add_argument(
-        "-p",
-        "--predict",
-        action="store_true",
-        help="predict reactivity for a given .csv file",
-    )
-    parser.add_argument(
         "-o", "--output_dir", default="output", help="Directory saving output files"
     )
     parser.add_argument(
@@ -181,6 +175,18 @@ def parse_args(cross_val=False):
             "--sample",
             type=int,
             help="(Optional) Randomly sample part of data for training during cross-validation",
+        )
+    else:
+        parser.add_argument(
+            "-p",
+            "--predict",
+            action="store_true",
+            help="predict reactivity for a given .csv file",
+        )
+        parser.add_argument(
+            "--output_file",
+            default="test_predicted.csv",
+            help="name of .csv file to write predictions to"
         )
 
     args = parser.parse_args()

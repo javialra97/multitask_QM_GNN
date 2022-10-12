@@ -158,8 +158,8 @@ for i in range(args.ensemble_size):
             [activation_energy_scaler, reaction_energy_scaler],
             args.rxn_id_column,
             args.rxn_smiles_column,
-            args.target_column1,
-            args.target_column2,
+            None,
+            None,
         )
         # load descriptors
         qmdf, df_reaction_desc = load_descriptors(args)
@@ -253,7 +253,7 @@ for i in range(args.ensemble_size):
         ) = predict_single_model(
             pipeline_test, 
             model, 
-            test_dataset.output_scalers,
+            [activation_energy_scaler, reaction_energy_scaler],
             len(test_dataset),
             args.selec_batch_size,
         )
@@ -269,11 +269,11 @@ if args.predict:
         predicted_activation_energies_ind
     )
 
-    # write predictions for fold i to csv file
+    # write predictions to csv file
     write_predictions(
         test_dataset.rxn_id,
         predicted_activation_energies,
         predicted_reaction_energies,
         args.rxn_id_column,
-        os.path.join(args.model_dir, f"test_predicted.csv"),
+        os.path.join(args.model_dir, f"{args.output_file}"),
     )

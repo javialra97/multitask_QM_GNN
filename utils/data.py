@@ -24,6 +24,7 @@ class Dataset:
             rxn_smiles_column (str): name of the rxn-smiles column
             target_column1 (str): name of the first target column
             target_column2 (str): name of the second target column
+
         """
         self.rxn_id = df[f"{rxn_id_column}"].values
         self.rxn_smiles = df[f"{rxn_smiles_column}"].values
@@ -34,23 +35,27 @@ class Dataset:
             df[f"{rxn_smiles_column}"].str.split(">", expand=True)[2].values
         )
 
-        self.activation_energy = df[f"{target_column1}"].values
-        self.reaction_energy = df[f"{target_column2}"].values
+        if target_column1 != None and target_column2 != None:
+            self.activation_energy = df[f"{target_column1}"].values
+            self.reaction_energy = df[f"{target_column2}"].values
 
-        if output_scalers != None:
-            self.output_scalers = output_scalers
+            if output_scalers != None:
+                self.output_scalers = output_scalers
+            else:
+                self.output_scalers = [
+                    scale_targets(self.activation_energy.copy()),
+                    scale_targets(self.reaction_energy.copy()),
+                ]
+
+            self.activation_energy_scaled = self.output_scalers[0].transform(
+                self.activation_energy.reshape(-1, 1)
+            )
+            self.reaction_energy_scaled = self.output_scalers[1].transform(
+                self.reaction_energy.reshape(-1, 1)
+            )
         else:
-            self.output_scalers = [
-                scale_targets(self.activation_energy.copy()),
-                scale_targets(self.reaction_energy.copy()),
-            ]
-
-        self.activation_energy_scaled = self.output_scalers[0].transform(
-            self.activation_energy.reshape(-1, 1)
-        )
-        self.reaction_energy_scaled = self.output_scalers[1].transform(
-            self.reaction_energy.reshape(-1, 1)
-        )
+            self.activation_energy, self.reaction_energy = None, None
+            self.activation_energy_scaled, self.reaction_energy_scaled = None, None
 
     def __len__(self):
         return len(self.rxn_smiles)
