@@ -276,8 +276,8 @@ def gnn_bayesian(
 
     space = {
         "depth": hp.quniform("depth", low=2, high=6, q=1),
-        "w_atom": hp.quniform("w_atom", low=1, high=7, q=0.5),
-        "w_reaction": hp.quniform("w_reaction", low=1, high=7, q=0.5),
+        "w_atom": hp.quniform("w_atom", low=0.1, high=0.9, q=0.1),
+        "w_reaction": hp.quniform("w_reaction", low=0.1, high=0.9, q=0.1),
         "ini_lr": hp.loguniform("ini_lr", low=-10, high=-5),
         "lr_ratio": hp.quniform("lr_ratio", low=0.9, high=0.99, q=0.01),
         "depth_mol_ffn": hp.quniform("depth_mol_ffn", low=1, high=4, q=1),

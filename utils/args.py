@@ -70,15 +70,16 @@ def parse_args(cross_val=False):
     parser.add_argument(
         "--w_atom",
         type=float,
-        default=1.0,
-        help="initialization of the weights of the qm atom-features relative to the learned atom-features",
+        default=0.5,
+        help="initialization of the weights of the qm atom-features" 
+        "(0.5 means equal weights for structural and QM atom features)",
     )
     parser.add_argument(
         "--w_reaction",
         type=float,
-        default=1.0,
+        default=0.5,
         help="initialization of the weights of the qm reaction-features"
-        "relative to the sum-pooled atom-feature based representation",
+        "(0.5 means equal weights for the sum-pooled atom-feature based representation and reaction-level descriptors)",
     )
     parser.add_argument(
         "--depth_mol_ffn",

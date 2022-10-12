@@ -123,7 +123,7 @@ class WLNRegressor(tf.keras.Model):
 
         if "none" not in self.selected_atom_descriptors:
             res_atom_hidden = K.concatenate(
-                [res_atom_hidden, self.w_atom * fatom_qm], axis=-1
+                [(tf.math.subtract(1.0, self.w_atom))*res_atom_hidden, self.w_atom * fatom_qm], axis=-1
             )
         res_atom_mask = self.node_reshape(res_atom_mask)
         res_core_mask = self.core_reshape(res_core_mask)
@@ -133,7 +133,7 @@ class WLNRegressor(tf.keras.Model):
         res_mol_hidden = K.sum(res_atom_hidden * res_atom_mask * res_core_mask, axis=-2)
         if "none" not in self.selected_reaction_descriptors:
             res_mol_hidden = K.concatenate(
-                [res_mol_hidden, self.w_reaction * freaction_qm], axis=-1
+                [(tf.math.subtract(1.0, self.w_reaction))*res_mol_hidden, self.w_reaction * freaction_qm], axis=-1
             )
 
         res_mol_hidden_act = self.mol_ffn_list_act[0](res_mol_hidden)
