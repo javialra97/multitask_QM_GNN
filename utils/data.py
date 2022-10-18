@@ -100,7 +100,7 @@ def split_data_cross_val(
             )
         ]
     elif train_valid_set_path is not None and test_set_path is not None:
-        valid = df.sample(frac=1 / (k_fold - 1), random_state=random_state + j)
+        valid = df.sample(frac=1 / (k_fold - 1), random_state=random_state + i + j)
         train = df[~(df[f"{rxn_id_column}"].isin(valid[f"{rxn_id_column}"]))]
         test = pd.read_csv(test_set_path, index_col=0)
 
