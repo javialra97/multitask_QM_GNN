@@ -21,10 +21,13 @@ from utils import lr_multiply_ratio, parse_args, create_logger
 from utils import Dataset, split_data_training
 from utils import predict_single_model, write_predictions
 
+# initialize
 args = parse_args()
 reactivity_data = pd.read_csv(args.data_path, index_col=0)
-
 logger = create_logger(name=args.model_dir)
+splits_dir = os.path.join(args.model_dir, 'splits')
+if not os.path.isdir(splits_dir):
+    os.mkdir(splits_dir)
 
 if args.predict:
     predicted_activation_energies_ind = []
@@ -42,6 +45,13 @@ for i in range(args.ensemble_size):
         logger.info(
             f" Size train set: {len(train)} - size validation set: {len(valid)} - size test set: {len(test)}"
         )
+
+        # save splits
+        current_split_dir = os.path.join(splits_dir,f"model_{i}")
+        os.makedirs(current_split_dir, exist_ok=True)
+        train.to_csv(os.path.join(current_split_dir, 'train.csv'))
+        valid.to_csv(os.path.join(current_split_dir, 'valid.csv'))
+        test.to_csv(os.path.join(current_split_dir, 'test.csv'))
 
         # process the training data
         train_dataset = Dataset(

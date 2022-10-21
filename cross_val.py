@@ -18,6 +18,9 @@ from utils import predict_single_model, write_predictions, evaluate
 # initialize
 args = parse_args(cross_val=True)
 logger = create_logger(name=args.model_dir)
+splits_dir = os.path.join(args.model_dir, 'splits')
+if not os.path.isdir(splits_dir):
+    os.mkdir(splits_dir)
 
 # load data set
 if args.data_path is not None:
@@ -77,6 +80,15 @@ for i in range(args.k_fold):
             args.random_state,
             args.test_set_path,
         )
+
+        # only store splits when a single model is used due to 
+        # ballooning storage footprint
+        if args.ensemble_size == 1:
+            current_split_dir = os.path.join(splits_dir,f"fold_{i}")
+            os.makedirs(current_split_dir, exist_ok=True)
+            train.to_csv(os.path.join(current_split_dir, 'train.csv'))
+            valid.to_csv(os.path.join(current_split_dir, 'valid.csv'))
+            test.to_csv(os.path.join(current_split_dir, 'test.csv'))
 
         logger.info(
             f" Size train set: {len(train)} - size validation set: {len(valid)} - size test set: {len(test)}"
