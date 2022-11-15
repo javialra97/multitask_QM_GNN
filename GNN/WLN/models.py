@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras import layers, Input, Model
+from tensorflow.keras import layers
 import tensorflow.keras.backend as K
 from .layers import WLN_Layer, Global_Attention
 import numpy as np
