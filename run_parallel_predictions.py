@@ -72,7 +72,7 @@ def launch_jobs(experiment, csv_file, log_dir):
 
 if __name__ == "__main__":
     os.makedirs(log_dir, exist_ok=True)
-    csv_files = [file for file in os.listdir(predictions_folder) if file.endswith('.csv')]
+    csv_files = [file for file in os.listdir(predictions_dir) if file.endswith('.csv')]
 
     for csv_file in csv_files:
         run_predictions(csv_file, predictions_dir, model_dir, log_dir, atom_desc_file, reaction_desc_file)
