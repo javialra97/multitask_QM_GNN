@@ -2,7 +2,7 @@ import os
 
 name = "dipole_split"
 
-cross_val_dir = "cross_val"
+cross_val_dir = "cross_val_selective"
 
 train_valid_set_file = f"train_valid_set_{name}.csv"
 
@@ -12,7 +12,7 @@ atom_desc_file = "atom_desc_cycloadd_wln.pkl"
 
 reaction_desc_file = "reaction_desc_cycloadd_wln.pkl"
 
-log_dir_head = f"log_test_{name}"
+log_dir_head = f"selective_splits/log_test_{name}"
 
 
 def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample=None):
@@ -35,6 +35,14 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
         "5",
         "--select_bond_descriptors",
         "none",
+        "--depth", "2",
+        "--ini_lr", "0.0011",
+        "--lr_ratio", "0.9",
+        "--w_atom", "2.5",
+        "--w_reaction", "4.5",
+        "--hidden_size_multiplier", "0",
+        "--depth_mol_ffn", "1",
+        "--random_state", "2",
     ]
 
     experiments = [
@@ -52,8 +60,6 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
             "--select_atom_descriptors",
             "nmr",
             "partial_charge",
-            "spin_dens",
-            "spin_dens_triplet",
             "fukui_elec",
             "fukui_neu",
             "--select_reaction_descriptors",
@@ -67,250 +73,15 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
         ],
         [
             "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/all_full",
+            f"{cross_val_dir}/{partition_scheme}/all_desc",
             "--select_atom_descriptors",
             "nmr",
             "partial_charge",
-            "spin_dens",
             "spin_dens_triplet",
             "fukui_elec",
             "fukui_neu",
         ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/trad",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "fukui_elec",
-            "fukui_neu",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/all_hard",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-        ],
-        [
-            "--model_dir" f"{cross_val_dir}/{partition_scheme}/all_soft",
-            "--select_atom_descriptors",
-            "spin_dens",
-            "spin_dens_triplet",
-            "fukui_elec",
-            "fukui_neu",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/GRP_full",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "spin_dens",
-            "spin_dens_triplet",
-            "fukui_elec",
-            "fukui_neu",
-            "--select_reaction_descriptors",
-            "G",
-            "E_r",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/RP_full",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "spin_dens",
-            "spin_dens_triplet",
-            "fukui_elec",
-            "fukui_neu",
-            "--select_reaction_descriptors",
-            "E_r",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/G_alt1_full",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "spin_dens",
-            "spin_dens_triplet",
-            "fukui_elec",
-            "fukui_neu",
-            "--select_reaction_descriptors",
-            "G_alt1",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/G_alt2_full",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "spin_dens",
-            "spin_dens_triplet",
-            "fukui_elec",
-            "fukui_neu",
-            "--select_reaction_descriptors",
-            "G_alt2",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/none_RP",
-            "--select_atom_descriptors",
-            "none",
-            "--select_reaction_descriptors",
-            "E_r",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/all_hard_morfeus",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "sasa",
-            "pint",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/all_morfeus",
-            "--select_atom_descriptors",
-            "sasa",
-            "pint",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/all_Gs",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "spin_dens",
-            "spin_dens_triplet",
-            "fukui_elec",
-            "fukui_neu",
-            "--select_reaction_descriptors",
-            "G",
-            "G_alt1",
-            "G_alt2",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/trad_morfeus_Gs",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "fukui_elec",
-            "fukui_neu",
-            "sasa",
-            "pint",
-            "--select_reaction_descriptors",
-            "G",
-            "G_alt1",
-            "G_alt2",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/all_full_morfeus",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "spin_dens",
-            "spin_dens_triplet",
-            "fukui_elec",
-            "fukui_neu",
-            "sasa",
-            "pint",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/react_only",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "spin_dens",
-            "spin_dens_triplet",
-            "fukui_elec",
-            "fukui_neu",
-            "--select_reaction_descriptors",
-            "G",
-            "G_alt1",
-            "G_alt2",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/react_only_hard",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "--select_reaction_descriptors",
-            "G",
-            "G_alt1",
-            "G_alt2",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/react_only_soft",
-            "--select_atom_descriptors",
-            "fukui_elec",
-            "fukui_neu",
-            "--select_reaction_descriptors",
-            "G",
-            "G_alt1",
-            "G_alt2",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/react_only_trad",
-            "--select_atom_descriptors",
-            "nmr",
-            "partial_charge",
-            "fukui_elec",
-            "fukui_neu",
-            "--select_reaction_descriptors",
-            "G",
-            "G_alt1",
-            "G_alt2",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/only_promotions",
-            "--select_atom_descriptors",
-            "none",
-            "--select_reaction_descriptors",
-            "G",
-            "G_alt1",
-            "G_alt2",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/only_promotions_corr",
-            "--select_atom_descriptors",
-            "none",
-            "--select_reaction_descriptors",
-            "G",
-            "G_alt1_corr",
-            "G_alt2_corr",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/only_promotions_orb",
-            "--select_atom_descriptors",
-            "none",
-            "--select_reaction_descriptors",
-            "G_orb",
-            "G_alt1_orb",
-            "G_alt2_orb",
-        ],
-        [
-            "--model_dir",
-            f"{cross_val_dir}/{partition_scheme}/only_orbital_energies",
-            "--select_atom_descriptors",
-            "none",
-            "--select_reaction_descriptors",
-            "homo_1",
-            "lumo_1",
-            "homo_2",
-            "lumo_2"
-        ]
+
     ]
 
     command_lines = []
@@ -335,7 +106,7 @@ def launch_jobs(experiments, log_dir):
             f.write("#SBATCH --partition=sched_mit_ccoley \n")
             f.write("#SBATCH --mem 32000 \n")
             f.write(
-                f"#SBATCH --output={log_dir}/{experiment[17].split('/')[-1]}.out \n"
+                f"#SBATCH --output={log_dir}/{experiment[31].split('/')[-1]}.out \n"
             )
             f.write("source /home/tstuyver/.bashrc \n")
             f.write("conda activate tf_gpu \n \n")
@@ -353,6 +124,4 @@ if __name__ == "__main__":
     os.makedirs(cross_val_dir, exist_ok=True)
     os.makedirs(log_dir_head, exist_ok=True)
 
-    # run_experiments('100_points', atom_desc_file, reaction_desc_file, sample=str(100))
-    # run_experiments('400_points', atom_desc_file, reaction_desc_file, sample=str(400))
     run_experiments("all_points", atom_desc_file, reaction_desc_file)

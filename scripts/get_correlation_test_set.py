@@ -15,9 +15,13 @@ correlation_list = []
 for i in range(len(df_true_list)):
     for j in range(len(df_test_list)):
         if df_true_list[i][1] == df_test_list[j][1]:
-            correlation_list.append([df_true_list[i][1], df_true_list[i][-1], df_test_list[j][-1]])
+            correlation_list.append(
+                [df_true_list[i][1], df_true_list[i][-1], df_test_list[j][-1]]
+            )
 
-correlation_df = pd.DataFrame(correlation_list, columns=['reaction_id', 'activation_energy', "predicted"])
+correlation_df = pd.DataFrame(
+    correlation_list, columns=["reaction_id", "activation_energy", "predicted"]
+)
 
 print(correlation_df.head())
 print(len(correlation_df))
