@@ -202,4 +202,7 @@ def parse_args(cross_val=False):
             args.select_reaction_descriptors,
         ) = (["none"], ["none"], ["none"])
 
+    # temporary, since bond descriptors are not implemented in the current version
+    args.select_bond_descriptors = ["none"]
+
     return args
