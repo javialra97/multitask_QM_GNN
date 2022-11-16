@@ -37,9 +37,14 @@ python reactivity.py --data_path datasets/iteration0_data.csv --atom_desc_path d
 ## Predicting
 To use the trained model, run:
 ```
-python reactivitiy -m <mode> --data_path <path to the predicting .csv file> --model_dir <directory containing the trained model> -p 
+python reactivity.py --data_path <path to the predicting .csv file> --model_dir <directory containing the trained model> -p [--no_qm] [--atom_desc_path <path to the .pkl file containing the atom-level descriptors>] [--reaction_desc_path <path to the .pkl file containing the reaction-level descriptors>] [--depth <number of layers in the WL embedder>] [--ini_lr <initial learning rate>] [--lr_ratio <learning rate decaying ratio>] [--w_atom <initialization of the weights of the qm atom-features>] [--w_reaction <initialization of the weights of the qm reaction-features>] [--hidden_size_multiplier <multiplication factor for the hidden size in the molecule-level layers>] [--depth_mol_ffn <depth of the molecule-level feedforward network>] [--random_state <random state to be selected for sampling/shuffling>] [--ensemble_size <the number of models to be ensembled>] [--splits <split of the dataset into testing, validating, and training. The sum should be 100>]
 ```
 where `data_path` is the path to the data `.csv` file, whose format has been discussed above. `model_dir` is the directory holding the trained model. The `model_dir` include scalers and model checkpoint files as discussed in the [training](#Training) section.
+
+For example
+```
+python reactivity.py --data_path datasets/iteration0_data.csv --atom_desc_path descriptors/atom_desc_iteration0_wln.pkl --reaction_desc_path descriptors/reaction_desc_iteration0_wln.pkl --depth 2 --ini_lr 0.00165 --lr_ratio 0.93 --w_atom 0.5 --w_reaction 0.3 --hidden_size_multiplier 0 --depth_mol_ffn 1 --random_state 0 --ensemble_size 10 --splits 0 5 95 --model_dir model_iteration0 -p
+```
 
 ## Cross-validating
 To perform a cross-validation, run (additional parameters to finetune the model architecture have been discussed above):
@@ -49,5 +54,5 @@ python reactivity.py --data_path <path to reaction data .csv file> [--no_qm] [--
 
 For example:
 ```
-python cross_val.py --data_path datasets/iteration0_data.csv --atom_desc_path descriptors/atom_desc_iteration0_wln.pkl --reaction_desc_path descriptors/reaction_desc_iteration0_wln.pkl --k_fold 10 --select_bond_descriptors none --depth 2 --ini_lr 0.00165 --lr_ratio 0.93 --w_atom 0.5 --w_reaction 0.3 --hidden_size_multiplier 0 --depth_mol_ffn 1 --random_state 2 --ensemble_size 10 --model_dir cross_val_ensemble10
+python cross_val.py --data_path datasets/iteration0_data.csv --atom_desc_path descriptors/atom_desc_iteration0_wln.pkl --reaction_desc_path descriptors/reaction_desc_iteration0_wln.pkl --k_fold 10 --depth 2 --ini_lr 0.00165 --lr_ratio 0.93 --w_atom 0.5 --w_reaction 0.3 --hidden_size_multiplier 0 --depth_mol_ffn 1 --random_state 2 --ensemble_size 10 --model_dir cross_val_ensemble10
 ```
