@@ -2,9 +2,14 @@
 
 This repository contains the code associated with the multitask QM-augmented GNN, used in the project "data-driven discovery of new bio-orthogonal click reactions" project. Code is provided "as-is". Minor edits may be required to tailor the scripts for different computational systems. 
 
-## Requirements
 
 ### Conda environment
+
+To set up a conda environment:
+
+```
+conda env create -f environment.yml
+```
 
 ## Data
 
@@ -41,7 +46,7 @@ python reactivity.py --data_path <path to the predicting .csv file> --model_dir 
 ```
 where `data_path` is the path to the data `.csv` file, whose format has been discussed above. `model_dir` is the directory holding the trained model. The `model_dir` include scalers and model checkpoint files as discussed in the [training](#Training) section.
 
-For example
+For example:
 ```
 python reactivity.py --data_path datasets/iteration0_data.csv --atom_desc_path descriptors/atom_desc_iteration0_wln.pkl --reaction_desc_path descriptors/reaction_desc_iteration0_wln.pkl --depth 2 --ini_lr 0.00165 --lr_ratio 0.93 --w_atom 0.5 --w_reaction 0.3 --hidden_size_multiplier 0 --depth_mol_ffn 1 --random_state 0 --ensemble_size 10 --splits 0 5 95 --model_dir model_iteration0 -p
 ```
