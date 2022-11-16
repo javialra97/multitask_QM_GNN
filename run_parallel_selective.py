@@ -1,18 +1,18 @@
 import os
 
-name = "dipole_split"
+name = "amide_double_split"
 
-cross_val_dir = "cross_val_selective"
+cross_val_dir = f"selective_sampling/cross_val_selective/cross_val_{name}"
 
 train_valid_set_file = f"train_valid_set_{name}.csv"
 
 test_set_file = f"test_set_{name}.csv"
 
-atom_desc_file = "atom_desc_cycloadd_wln.pkl"
+atom_desc_file = "atom_desc_final_wln.pkl"
 
-reaction_desc_file = "reaction_desc_cycloadd_wln.pkl"
+reaction_desc_file = "reaction_desc_final_wln.pkl"
 
-log_dir_head = f"selective_splits/log_test_{name}"
+log_dir_head = f"selective_sampling/log_test_{name}"
 
 
 def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample=None):
@@ -24,22 +24,22 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
         "python",
         "cross_val.py",
         "--train_valid_set_path",
-        f"datasets_selective_sampling/{train_valid_set_file}",
+        f"../datasets_selective_sampling_final/{train_valid_set_file}",
         "--test_set_path",
-        f"datasets_selective_sampling/{test_set_file}",
+        f"../datasets_selective_sampling_final/{test_set_file}",
         "--atom_desc_path",
-        f"descriptors/{atom_desc_file}",
+        f"../descriptors_final/{atom_desc_file}",
         "--reaction_desc_path",
-        f"descriptors/{reaction_desc_file}",
+        f"../descriptors_final/{reaction_desc_file}",
         "--k_fold",
         "5",
         "--select_bond_descriptors",
         "none",
         "--depth", "2",
-        "--ini_lr", "0.0011",
-        "--lr_ratio", "0.9",
-        "--w_atom", "2.5",
-        "--w_reaction", "4.5",
+        "--ini_lr", "0.00165",
+        "--lr_ratio", "0.93",
+        "--w_atom", "0.5",
+        "--w_reaction", "0.3",
         "--hidden_size_multiplier", "0",
         "--depth_mol_ffn", "1",
         "--random_state", "2",
@@ -71,6 +71,15 @@ def run_experiments(partition_scheme, atom_desc_file, reaction_desc_file, sample
             "--select_atom_descriptors",
             "none",
         ],
+	[
+            "--model_dir",
+            f"{cross_val_dir}/{partition_scheme}/trad_desc",
+            "--select_atom_descriptors",
+            "nmr",
+            "partial_charge",
+            "fukui_elec",
+            "fukui_neu",
+        ],
         [
             "--model_dir",
             f"{cross_val_dir}/{partition_scheme}/all_desc",
@@ -99,7 +108,7 @@ def launch_jobs(experiments, log_dir):
         with open("generic_slurm.sh", "w") as f:
             f.write("#!/bin/bash \n")
             f.write("#SBATCH -N 1 \n")
-            f.write("#SBATCH -n 16 \n")
+            f.write("#SBATCH -n 6 \n")
             f.write("#SBATCH --time=11:59:00 \n")
             f.write("#SBATCH --gres=gpu:1 \n")
             f.write("#SBATCH --constraint=centos7 \n")
@@ -125,3 +134,5 @@ if __name__ == "__main__":
     os.makedirs(log_dir_head, exist_ok=True)
 
     run_experiments("all_points", atom_desc_file, reaction_desc_file)
+
+
