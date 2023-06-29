@@ -280,34 +280,8 @@ def _mol2graph(
                 rbf_expansion, -1, partial_charge, -6.0, 0.6, 20
             )
 
-            fukui_elec = qm_series["fukui_elec"].reshape(-1, 1)
-            fukui_elec = np.apply_along_axis(
-                rbf_expansion, -1, fukui_elec, -6.0, 0.6, 20
-            )
-
-            fukui_neu = qm_series["fukui_neu"].reshape(-1, 1)
-            fukui_neu = np.apply_along_axis(rbf_expansion, -1, fukui_neu, -6.0, 0.6, 20)
-
             spin_dens = qm_series["spin_dens"].reshape(-1, 1)
             spin_dens = np.apply_along_axis(rbf_expansion, -1, spin_dens, -6.0, 0.6, 20)
-
-            spin_dens_triplet = qm_series["spin_dens_triplet"].reshape(-1, 1)
-            spin_dens_triplet = np.apply_along_axis(
-                rbf_expansion, -1, spin_dens_triplet, -6.0, 0.6, 20
-            )
-
-            nmr = qm_series["NMR"].reshape(-1, 1)
-            nmr = np.apply_along_axis(rbf_expansion, -1, nmr, -6.0, 0.6, 20)
-
-            if (
-                "sasa" in selected_atom_descriptors
-                or "pint" in selected_atom_descriptors
-            ):
-                sasa = qm_series["sasa"].reshape(-1, 1)
-                sasa = np.apply_along_axis(rbf_expansion, -1, sasa, -6.0, 0.6, 20)
-
-                pint = qm_series["pint"].reshape(-1, 1)
-                pint = np.apply_along_axis(rbf_expansion, -1, pint, -6.0, 0.6, 20)
 
             selected_atom_descriptors = list(set(selected_atom_descriptors))
             selected_atom_descriptors.sort()
@@ -384,9 +358,9 @@ def _mol2graph(
 def smiles2graph_pr(
     r_smiles,
     p_smiles,
-    selected_atom_descriptors=["partial_charge", "fukui_elec", "fukui_neu", "nmr"],
+    selected_atom_descriptors=["partial_charge", "spin_dens"],
     selected_bond_descriptors=["bond_order", "bond_length"],
-    selected_reaction_descriptors=["G", "E_r", "G_alt1", "G_alt2"],
+    selected_reaction_descriptors=["dG_forward", "dG_reverse", "q_reac1", "qH_reac1", "q_prod2", "qH_prod2"],
     core_buffer=0,
 ):
     rs_core = _get_reacting_core(r_smiles, p_smiles, core_buffer)

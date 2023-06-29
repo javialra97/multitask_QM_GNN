@@ -45,13 +45,13 @@ def parse_args(cross_val=False):
     parser.add_argument(
         "--select_atom_descriptors",
         nargs="+",
-        default=["partial_charge", "fukui_elec", "fukui_neu", "nmr"],
+        default=["partial_charge", "spin_dens"],
         help="(optional) selection of atom-condensed descriptors to feed to the GNN model",
     )
     parser.add_argument(
         "--select_reaction_descriptors",
         nargs="+",
-        default=["G", "G_alt1", "G_alt2"],
+        default=["dG_forward", "dG_reverse", "q_reac1", "qH_reac1", "q_prod2", "qH_prod2"],
         help="(optional) selection of reaction descriptors to feed to the GNN model",
     )
     parser.add_argument(
