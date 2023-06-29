@@ -376,46 +376,37 @@ def smiles2graph_pr(
     return features, r_smiles
 
 
-def _get_reacting_core(rs, p, buffer):
+def _get_reacting_core(rs, ps, buffer):
     """
     use molAtomMapNumber of molecules
     buffer: neighbor to be considered as reacting center
     return: atomidx of reacting core
     """
     r_mols = Chem.MolFromSmiles(rs)
-    p_mol = Chem.MolFromSmiles(p)
+    p_mols = Chem.MolFromSmiles(ps)
 
     rs_dict = {a.GetIntProp("molAtomMapNumber"): a for a in r_mols.GetAtoms()}
-    p_dict = {a.GetIntProp("molAtomMapNumber"): a for a in p_mol.GetAtoms()}
+    ps_dict = {a.GetIntProp("molAtomMapNumber"): a for a in p_mols.GetAtoms()}
 
     rs_reactants = []
     for r_smiles in rs.split("."):
         for a in Chem.MolFromSmiles(r_smiles).GetAtoms():
-            if a.GetIntProp("molAtomMapNumber") in p_dict:
+            if a.GetIntProp("molAtomMapNumber") in ps_dict:
                 rs_reactants.append(r_smiles)
                 break
     rs_reactants = ".".join(rs_reactants)
 
     core_mapnum = set()
-    for a_map in p_dict:
-        a_neighbor_in_p = set(
-            [a.GetIntProp("molAtomMapNumber") for a in p_dict[a_map].GetNeighbors()]
-        )
-        a_neighbor_in_rs = set(
-            [a.GetIntProp("molAtomMapNumber") for a in rs_dict[a_map].GetNeighbors()]
-        )
-        if a_neighbor_in_p != a_neighbor_in_rs:
+    
+    for a_map in ps_dict:
+        if ps_dict[a_map].GetNumRadicalElectrons():
             core_mapnum.add(a_map)
-        else:
-            for a_neighbor in a_neighbor_in_p:
-                b_in_p = p_mol.GetBondBetweenAtoms(
-                    p_dict[a_neighbor].GetIdx(), p_dict[a_map].GetIdx()
-                )
-                b_in_r = r_mols.GetBondBetweenAtoms(
-                    rs_dict[a_neighbor].GetIdx(), rs_dict[a_map].GetIdx()
-                )
-                if b_in_p.GetBondType() != b_in_r.GetBondType():
-                    core_mapnum.add(a_map)
+            break
+    
+    for a_map in rs_dict:
+        if rs_dict[a_map].GetNumRadicalElectrons():
+            core_mapnum.add(a_map)
+            break
 
     core_rs = _get_buffer(r_mols, [rs_dict[a].GetIdx() for a in core_mapnum], buffer)
 
