@@ -24,7 +24,7 @@ elem_list = [
     "H",
 ]
 
-atom_fdim_geo = len(elem_list) + 6 + 6 + 6 + 1
+atom_fdim_geo = len(elem_list) + 6 + 6 + 6 + 1 + 1
 
 bond_fdim = 6
 max_nb = 10
@@ -78,7 +78,8 @@ def atom_features(atom):
         + onek_encoding_unk(atom.GetDegree(), [0, 1, 2, 3, 4, 5])
         + onek_encoding_unk(atom.GetExplicitValence(), [1, 2, 3, 4, 5, 6])
         + onek_encoding_unk(atom.GetImplicitValence(), [0, 1, 2, 3, 4, 5])
-        + [atom.GetIsAromatic()],
+        + [atom.GetIsAromatic()]
+        + [atom.GetNumRadicalElectrons()],
         dtype=np.float32,
     )
 
