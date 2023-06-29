@@ -231,7 +231,7 @@ def _mol2graph(
     ps,
     core=[],
 ):
-    atom_fdim_qm = 20 * len(selected_atom_descriptors)
+    atom_fdim_qm = 20 * len(selected_atom_descriptors) 
     reaction_fdim_qm = len(selected_reaction_descriptors)
 
     (
@@ -248,11 +248,73 @@ def _mol2graph(
         ps, fatom_index
     )
 
-    fatoms_qm = np.zeros((n_atoms, atom_fdim_qm))
+    fatoms_qm = np.zeros((n_atoms * 2, atom_fdim_qm))  # * 2  because we have in reacs and prods
     freaction_qm = np.zeros((reaction_fdim_qm,))
-    core_mask = np.zeros((n_atoms,), dtype=np.int32)
+    core_mask_r = np.zeros((n_atoms,), dtype=np.int32)  
+    core_mask_p = np.zeros((n_atoms,), dtype=np.int32)
 
     for smiles in rs.split("."):
+
+        mol = Chem.MolFromSmiles(smiles)
+        fatom_index_mol = {
+            a.GetIntProp("molAtomMapNumber") - 1: a.GetIdx() for a in mol.GetAtoms()
+        }
+
+        if "none" not in selected_atom_descriptors:
+            qm_series = qm_descriptors.loc[smiles]
+
+            partial_charge = qm_series["partial_charge"].reshape(-1, 1)
+            partial_charge = np.apply_along_axis(
+                rbf_expansion, -1, partial_charge, -6.0, 0.6, 20
+            )
+
+            spin_dens = qm_series["spin_dens"].reshape(-1, 1)
+            spin_dens = np.apply_along_axis(rbf_expansion, -1, spin_dens, -6.0, 0.6, 20)
+
+            selected_atom_descriptors = list(set(selected_atom_descriptors))
+            selected_atom_descriptors.sort()
+
+            atom_qm_descriptor = None
+
+            for descriptor in selected_atom_descriptors:
+                if atom_qm_descriptor is not None:
+                    atom_qm_descriptor = np.concatenate(
+                        [atom_qm_descriptor, locals()[descriptor]], axis=-1
+                    )
+                else:
+                    atom_qm_descriptor = locals()[descriptor]
+
+        import pdb; pdb.set_trace()
+
+        for map_idx in fatom_index_mol:
+            if "none" not in selected_atom_descriptors:
+                fatoms_qm[fatom_index[map_idx], :] = atom_qm_descriptor[
+                    fatom_index_mol[map_idx], :
+                ]
+            if fatom_index[map_idx] in core:
+                core_mask_r[fatom_index[map_idx]] = 1
+
+        for bond in mol.GetBonds():
+            a1i, a2i = bond.GetBeginAtom().GetIntProp(
+                "molAtomMapNumber"
+            ), bond.GetEndAtom().GetIntProp("molAtomMapNumber")
+            idx = fbond_index["{}-{}".format(*sorted([a1i - 1, a2i - 1]))]
+            a1 = fatom_index[a1i - 1]
+            a2 = fatom_index[a2i - 1]
+
+            a1i = fatom_index_mol[a1i - 1]
+            a2i = fatom_index_mol[a2i - 1]
+
+            if num_nbs[a1] == max_nb or num_nbs[a2] == max_nb:
+                raise Exception(smiles)
+            atom_nb[a1, num_nbs[a1]] = a2
+            atom_nb[a2, num_nbs[a2]] = a1
+            bond_nb[a1, num_nbs[a1]] = idx
+            bond_nb[a2, num_nbs[a2]] = idx
+            num_nbs[a1] += 1
+            num_nbs[a2] += 1
+    
+    for smiles in ps.split("."):
 
         mol = Chem.MolFromSmiles(smiles)
         fatom_index_mol = {
@@ -289,7 +351,7 @@ def _mol2graph(
                     fatom_index_mol[map_idx], :
                 ]
             if fatom_index[map_idx] in core:
-                core_mask[fatom_index[map_idx]] = 1
+                core_mask_p[fatom_index[map_idx]] = 1
 
         for bond in mol.GetBonds():
             a1i, a2i = bond.GetBeginAtom().GetIntProp(
@@ -302,16 +364,19 @@ def _mol2graph(
             a1i = fatom_index_mol[a1i - 1]
             a2i = fatom_index_mol[a2i - 1]
 
-            if num_nbs[a1] == max_nb or num_nbs[a2] == max_nb:
+            if num_nbs_p[a1] == max_nb or num_nbs_p[a2] == max_nb:
                 raise Exception(smiles)
-            atom_nb[a1, num_nbs[a1]] = a2
-            atom_nb[a2, num_nbs[a2]] = a1
-            bond_nb[a1, num_nbs[a1]] = idx
-            bond_nb[a2, num_nbs[a2]] = idx
-            num_nbs[a1] += 1
-            num_nbs[a2] += 1
+            atom_nb_p[a1, num_nbs_p[a1]] = a2
+            atom_nb_p[a2, num_nbs_p[a2]] = a1
+            bond_nb_p[a1, num_nbs_p[a1]] = idx
+            bond_nb_p[a2, num_nbs_p[a2]] = idx
+            num_nbs_p[a1] += 1
+            num_nbs_p[a2] += 1
 
-        import pdb; pdb.set_trace()
+    
+
+    core_mask = np.concatenate([core_mask_r, core_mask_p])
+    #import pdb; pdb.set_trace()
 
     selected_reaction_descriptors = list(set(selected_reaction_descriptors))
     selected_reaction_descriptors.sort()
