@@ -259,19 +259,6 @@ def _mol2graph(
             a.GetIntProp("molAtomMapNumber") - 1: a.GetIdx() for a in mol.GetAtoms()
         }
 
-        if "none" not in selected_bond_descriptors:
-            qm_series = qm_descriptors.loc[smiles]
-
-            bond_index = np.expand_dims(qm_series["bond_order_matrix"], -1)
-            bond_index = np.apply_along_axis(
-                rbf_expansion, -1, bond_index, 0.5, 0.125, 20
-            )
-
-            bond_distance = np.expand_dims(qm_series["distance_matrix"], -1)
-            bond_distance = np.apply_along_axis(
-                rbf_expansion, -1, bond_distance, 0.5, 0.10, 20
-            )
-
         if "none" not in selected_atom_descriptors:
             qm_series = qm_descriptors.loc[smiles]
 
@@ -324,10 +311,7 @@ def _mol2graph(
             num_nbs[a1] += 1
             num_nbs[a2] += 1
 
-            if "bond_order" in selected_bond_descriptors:
-                fbonds[idx, :20] = bond_index[a1i, a2i]
-            if "bond_length" in selected_bond_descriptors:
-                fbonds[idx, 20:] = bond_distance[a1i, a2i]
+        import pdb; pdb.set_trace()
 
     selected_reaction_descriptors = list(set(selected_reaction_descriptors))
     selected_reaction_descriptors.sort()
