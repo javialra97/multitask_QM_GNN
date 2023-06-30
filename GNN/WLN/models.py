@@ -43,13 +43,13 @@ class WLNRegressor(tf.keras.Model):
             self.attention = Global_Attention(hidden_size)
         else:
             self.reaction_score0 = layers.Dense(
-                hidden_size + len(self.selected_atom_descriptors) * 20,
+                hidden_size + len(self.selected_atom_descriptors) * 20 * 2, # because in mol_graph we did 
                 activation=K.relu,
                 kernel_initializer=tf.random_normal_initializer(stddev=0.1),
                 use_bias=False,
             )
             self.attention = Global_Attention(
-                hidden_size + len(self.selected_atom_descriptors) * 20
+                hidden_size + len(self.selected_atom_descriptors) * 20 * 2  # because in mol_graph we did 
             )
 
         if "none" in self.selected_reaction_descriptors:
