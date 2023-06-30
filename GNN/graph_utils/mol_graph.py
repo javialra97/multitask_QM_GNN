@@ -231,7 +231,7 @@ def _mol2graph(
     ps,
     core=[],
 ):
-    atom_fdim_qm = 20 * len(selected_atom_descriptors)
+    atom_fdim_qm = 20 * len(selected_atom_descriptors) * 2
     reaction_fdim_qm = len(selected_reaction_descriptors)
 
     (
@@ -248,8 +248,9 @@ def _mol2graph(
         ps, fatom_index
     )
 
-    fatoms_qm_r = np.zeros((n_atoms, atom_fdim_qm))  
-    fatoms_qm_p = np.zeros((n_atoms, atom_fdim_qm))
+    fatoms_qm_r = np.zeros((n_atoms, int(atom_fdim_qm/2)))  
+    fatoms_qm_p = np.zeros((n_atoms, int(atom_fdim_qm/2)))
+    fatoms_qm = np.zeros((n_atoms, atom_fdim_qm)) 
     freaction_qm = np.zeros((reaction_fdim_qm,))
     core_mask = np.zeros((n_atoms,), dtype=np.int32)  
 
@@ -374,7 +375,9 @@ def _mol2graph(
     
 
     #fatoms_qm = fatoms_qm_r - fatoms_qm_p
-    fatoms_qm = np.concatenate([fatoms_qm_r, fatoms_qm_p], axis=1)
+    #fatoms_qm = np.concatenate([fatoms_qm_r, fatoms_qm_p], axis=1)
+    fatoms_qm[:, :40] = fatoms_qm_r
+    fatoms_qm[:, 40:] = fatoms_qm_p
     #import pdb; pdb.set_trace()
 
     selected_reaction_descriptors = list(set(selected_reaction_descriptors))
