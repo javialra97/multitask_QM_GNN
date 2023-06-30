@@ -353,6 +353,7 @@ class Graph_DataLoader(Sequence):
             pack1D(nb_list_p),
             get_mask(fatom_list_p),
         )
+
         if self.predict:
             return res_graph_inputs
         else:

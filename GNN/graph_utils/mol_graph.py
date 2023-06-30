@@ -248,10 +248,10 @@ def _mol2graph(
         ps, fatom_index
     )
 
-    fatoms_qm = np.zeros((n_atoms * 2, atom_fdim_qm))  # * 2  because we have in reacs and prods
+    fatoms_qm_r = np.zeros((n_atoms, atom_fdim_qm))  
+    fatoms_qm_p = np.zeros((n_atoms, atom_fdim_qm))
     freaction_qm = np.zeros((reaction_fdim_qm,))
-    core_mask_r = np.zeros((n_atoms,), dtype=np.int32)  
-    core_mask_p = np.zeros((n_atoms,), dtype=np.int32)
+    core_mask = np.zeros((n_atoms,), dtype=np.int32)  
 
     for smiles in rs.split("."):
 
@@ -284,15 +284,15 @@ def _mol2graph(
                 else:
                     atom_qm_descriptor = locals()[descriptor]
 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
 
         for map_idx in fatom_index_mol:
             if "none" not in selected_atom_descriptors:
-                fatoms_qm[fatom_index[map_idx], :] = atom_qm_descriptor[
+                fatoms_qm_r[fatom_index[map_idx], :] = atom_qm_descriptor[
                     fatom_index_mol[map_idx], :
                 ]
             if fatom_index[map_idx] in core:
-                core_mask_r[fatom_index[map_idx]] = 1
+                core_mask[fatom_index[map_idx]] = 1
 
         for bond in mol.GetBonds():
             a1i, a2i = bond.GetBeginAtom().GetIntProp(
@@ -347,11 +347,9 @@ def _mol2graph(
 
         for map_idx in fatom_index_mol:
             if "none" not in selected_atom_descriptors:
-                fatoms_qm[fatom_index[map_idx], :] = atom_qm_descriptor[
+                fatoms_qm_p[fatom_index[map_idx], :] = atom_qm_descriptor[
                     fatom_index_mol[map_idx], :
                 ]
-            if fatom_index[map_idx] in core:
-                core_mask_p[fatom_index[map_idx]] = 1
 
         for bond in mol.GetBonds():
             a1i, a2i = bond.GetBeginAtom().GetIntProp(
@@ -375,7 +373,7 @@ def _mol2graph(
 
     
 
-    core_mask = np.concatenate([core_mask_r, core_mask_p])
+    fatoms_qm = fatoms_qm_r - fatoms_qm_p
     #import pdb; pdb.set_trace()
 
     selected_reaction_descriptors = list(set(selected_reaction_descriptors))

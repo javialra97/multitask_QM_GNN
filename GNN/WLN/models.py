@@ -116,7 +116,7 @@ class WLNRegressor(tf.keras.Model):
         freaction_qm = inputs[9]
 
         res_inputs_p = inputs[10:]
-
+        
         res_atom_hidden_r = self.WLN(res_inputs[:6])
         res_atom_hidden_p = self.WLN(res_inputs_p)
         res_atom_hidden = res_atom_hidden_r - res_atom_hidden_p
