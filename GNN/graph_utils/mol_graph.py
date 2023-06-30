@@ -231,7 +231,7 @@ def _mol2graph(
     ps,
     core=[],
 ):
-    atom_fdim_qm = 20 * len(selected_atom_descriptors) 
+    atom_fdim_qm = 20 * len(selected_atom_descriptors)
     reaction_fdim_qm = len(selected_reaction_descriptors)
 
     (
@@ -373,7 +373,8 @@ def _mol2graph(
 
     
 
-    fatoms_qm = fatoms_qm_r - fatoms_qm_p
+    #fatoms_qm = fatoms_qm_r - fatoms_qm_p
+    fatoms_qm = np.concatenate([fatoms_qm_r, fatoms_qm_p], axis=1)
     #import pdb; pdb.set_trace()
 
     selected_reaction_descriptors = list(set(selected_reaction_descriptors))
