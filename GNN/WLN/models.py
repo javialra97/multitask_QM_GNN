@@ -118,35 +118,21 @@ class WLNRegressor(tf.keras.Model):
         res_atom_hidden_r = self.WLN(res_inputs[:6])
         res_atom_hidden_p = self.WLN(res_inputs_p)
         res_atom_hidden = res_atom_hidden_r - res_atom_hidden_p
-        #print(res_atom_hidden.shape)
-
-        res_att_context, _ = self.attention(res_atom_hidden, res_inputs[-2])
-        res_atom_hidden = res_atom_hidden + res_att_context
-
-        #if None in fatom_qm.shape:
-        #    fatom_qm = np.zeros((0, 0, len(self.selected_atom_descriptors) * 20 * 2))
-
+        
         if "none" not in self.selected_atom_descriptors:
             res_atom_hidden = K.concatenate(
                 [(tf.math.subtract(1.0, self.w_atom))*res_atom_hidden, self.w_atom * fatom_qm], axis=-1
             )
-        
-        #print(res_atom_hidden.shape)
         res_atom_mask = self.node_reshape(res_atom_mask)
         res_core_mask = self.core_reshape(res_core_mask)
-        #import pdb; pdb.set_trace()
-        #res_att_context, _ = self.attention(res_atom_hidden, res_inputs[-2])
-        #res_atom_hidden = res_atom_hidden + res_att_context
-        #print(res_atom_hidden.shape)
+        res_att_context, _ = self.attention(res_atom_hidden, res_inputs[-2])
+        res_atom_hidden = res_atom_hidden + res_att_context
         res_atom_hidden = self.reaction_score0(res_atom_hidden)
-        #print(res_atom_hidden.shape)
         res_mol_hidden = K.sum(res_atom_hidden * res_atom_mask * res_core_mask, axis=-2)
-        #print(res_atom_hidden.shape)
         if "none" not in self.selected_reaction_descriptors:
             res_mol_hidden = K.concatenate(
                 [(tf.math.subtract(1.0, self.w_reaction))*res_mol_hidden, self.w_reaction * freaction_qm], axis=-1
             )
-        #print(res_mol_hidden.shape)
         res_mol_hidden_act = self.mol_ffn_list_act[0](res_mol_hidden)
         for i in range(1, self.depth_mol_ffn):
             res_mol_hidden_act = self.mol_ffn_list_act[i](res_mol_hidden_act)

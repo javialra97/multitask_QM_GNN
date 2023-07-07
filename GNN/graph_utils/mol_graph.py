@@ -78,8 +78,7 @@ def atom_features(atom):
         + onek_encoding_unk(atom.GetDegree(), [0, 1, 2, 3, 4, 5])
         + onek_encoding_unk(atom.GetExplicitValence(), [1, 2, 3, 4, 5, 6])
         + onek_encoding_unk(atom.GetImplicitValence(), [0, 1, 2, 3, 4, 5])
-        + [atom.GetIsAromatic()]
-        + [atom.GetNumRadicalElectrons()],
+        + [atom.GetIsAromatic()],
         dtype=np.float32,
     )
 
@@ -270,7 +269,7 @@ def _mol2graph(
             )
 
             spin_dens = qm_series["spin_dens"].reshape(-1, 1)
-            spin_dens = np.apply_along_axis(rbf_expansion, -1, spin_dens, -6.0, 0.6, 20)
+            spin_dens = np.apply_along_axis(rbf_expansion, -1, spin_dens, -6.0, 0.8, 20)
 
             selected_atom_descriptors = list(set(selected_atom_descriptors))
             selected_atom_descriptors.sort()
@@ -331,7 +330,7 @@ def _mol2graph(
             )
 
             spin_dens = qm_series["spin_dens"].reshape(-1, 1)
-            spin_dens = np.apply_along_axis(rbf_expansion, -1, spin_dens, -6.0, 0.6, 20)
+            spin_dens = np.apply_along_axis(rbf_expansion, -1, spin_dens, -6.0, 0.8, 20)
 
             selected_atom_descriptors = list(set(selected_atom_descriptors))
             selected_atom_descriptors.sort()

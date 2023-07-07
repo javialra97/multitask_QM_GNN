@@ -63,7 +63,7 @@ def construct_input_pipeline(
             tf_dataset = tf.data.Dataset.from_generator(
                 gen_data,
                 output_signature=(
-                    tf.TensorSpec(shape=(None, None, 37), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
@@ -73,7 +73,7 @@ def construct_input_pipeline(
                     tf.TensorSpec(shape=(None, None), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, None), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None), dtype=tf.float32),
-                    tf.TensorSpec(shape=(None, None, 37), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
@@ -85,7 +85,7 @@ def construct_input_pipeline(
             tf_dataset = tf.data.Dataset.from_generator(
                 gen_data,
                 output_signature=(
-                    tf.TensorSpec(shape=(None, None, 37), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
@@ -100,7 +100,7 @@ def construct_input_pipeline(
                         shape=(None, len(selected_reaction_descriptors)),
                         dtype=tf.float32,
                     ),
-                    tf.TensorSpec(shape=(None, None, 37), dtype=tf.float32),
+                    tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
                     tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
@@ -114,7 +114,7 @@ def construct_input_pipeline(
                 gen_data,
                 output_signature=(
                     (
-                        tf.TensorSpec(shape=(None, None, 37), dtype=tf.float32),
+                        tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
@@ -124,7 +124,7 @@ def construct_input_pipeline(
                         tf.TensorSpec(shape=(None, None), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, None), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None), dtype=tf.float32),
-                        tf.TensorSpec(shape=(None, None, 37), dtype=tf.float32),
+                        tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
@@ -146,7 +146,7 @@ def construct_input_pipeline(
                 gen_data,
                 output_signature=(
                     (
-                        tf.TensorSpec(shape=(None, None, 37), dtype=tf.float32),
+                        tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
@@ -161,7 +161,7 @@ def construct_input_pipeline(
                             shape=(None, len(selected_reaction_descriptors)),
                             dtype=tf.float32,
                         ),
-                        tf.TensorSpec(shape=(None, None, 37), dtype=tf.float32),
+                        tf.TensorSpec(shape=(None, None, 36), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 6), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
                         tf.TensorSpec(shape=(None, None, 10, 2), dtype=tf.float32),
