@@ -51,7 +51,7 @@ def parse_command_line_args():
     parser.add_argument(
         "--select_atom_descriptors",
         nargs="+",
-        default=["partial_charge", "spin_densities"],
+        default=["partial_charge", "spin_dens"],
         help="(Optional) Selection of atom-condensed descriptors to feed to the (ml_QM_)GNN model",
     )
     parser.add_argument(
