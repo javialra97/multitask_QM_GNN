@@ -51,13 +51,13 @@ def parse_command_line_args():
     parser.add_argument(
         "--select_atom_descriptors",
         nargs="+",
-        default=["partial_charge", "fukui_elec", "fukui_neu", "nmr"],
+        default=["partial_charge", "spin_densities"],
         help="(Optional) Selection of atom-condensed descriptors to feed to the (ml_QM_)GNN model",
     )
     parser.add_argument(
         "--select_reaction_descriptors",
         nargs="+",
-        default=["G", "G_alt1", "G_alt2"],
+        default=["dG_forward", "dG_reverse"],
         help="(Optional) Selection of reaction descriptors to feed to the (ml_)QM_GNN model",
     )
     parser.add_argument(
@@ -281,9 +281,7 @@ def gnn_bayesian(
         "ini_lr": hp.loguniform("ini_lr", low=-10, high=-5),
         "lr_ratio": hp.quniform("lr_ratio", low=0.9, high=0.99, q=0.01),
         "depth_mol_ffn": hp.quniform("depth_mol_ffn", low=1, high=4, q=1),
-        "hidden_size_multiplier": hp.quniform(
-            "hidden_size_multiplier", low=0, high=20, q=10
-        ),
+        "hidden_size_multiplier": hp.quniform("hidden_size_multiplier", low=0, high=20, q=10),
     }
 
     fmin_objective = partial(
@@ -304,7 +302,7 @@ def gnn_bayesian(
         selec_batch_size=10,
     )
 
-    best = fmin(fmin_objective, space, algo=tpe.suggest, max_evals=64)
+    best = fmin(fmin_objective, space, algo=tpe.suggest, max_evals=16)
     logger.info(best)
 
 
